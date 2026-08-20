@@ -22,7 +22,8 @@ for filename, typename in components.items():
     assert "import Caelestia" not in text
 
 # All embedded subpages share one header component.
-assert SHELL.count("Style.PageHeader {") == 3
+# Phase 17.6 adds the top-level About header to the three workflow headers.
+assert SHELL.count("Style.PageHeader {") == 4
 assert 'title: "WebApp-Info"' in SHELL
 assert "id: actionDetailsColumn" in SHELL
 assert 'subtitle: "Verfügbare Funktionen des Caelestia-Applets"' in SHELL

@@ -24,7 +24,8 @@ assert "target: root.outgoingMainPageItem" in main_switch
 assert "target: root.incomingMainPageItem" in main_switch
 assert "target: root.incomingMainPageTranslate" in main_switch
 assert "target: root.pageItem(root.displayedMainPage)" not in main_switch
-assert SHELL.count("&& opacity > 0.01") == 4
+# Phase 17.6 adds About as a fifth route using the same guarded page input.
+assert SHELL.count("&& opacity > 0.01") == 5
 
 # Category changes follow the same Nexus Pages sequence.
 content_switch = SHELL[SHELL.index("id: contentSwitch"):SHELL.index("Style.WindowCloseDock")]

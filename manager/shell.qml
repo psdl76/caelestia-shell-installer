@@ -71,6 +71,16 @@ ShellRoot {
     property bool startupPreflightDone: false
     property bool startupCatalogDone: false
     property bool startupAppletDone: false
+    property string projectVersion: "–"
+
+    FileView {
+        id: versionFile
+        path: root.projectRoot + "/VERSION"
+        onLoaded: {
+            const value = String(versionFile.text() ?? "").trim()
+            root.projectVersion = value.length > 0 ? value : "–"
+        }
+    }
 
     function consumeStartup(line) {
         const value = String(line ?? "").trim()
@@ -199,6 +209,8 @@ ShellRoot {
             return actionPage
         if (page === "applet-settings")
             return appletSettingsPage
+        if (page === "about")
+            return aboutPage
         return catalogPage
     }
 
@@ -209,6 +221,8 @@ ShellRoot {
             return actionPageTranslate
         if (page === "applet-settings")
             return appletSettingsPageTranslate
+        if (page === "about")
+            return aboutPageTranslate
         return catalogPageTranslate
     }
 
@@ -224,6 +238,13 @@ ShellRoot {
         root.pendingMainPage = page
         root.mainPageDirection = direction || 1
         mainPageSwitch.restart()
+    }
+
+    function openAbout() {
+        root.actionMenuOpen = false
+        root.wizardOpen = false
+        root.appletSettingsOpen = false
+        root.navigateMainPage("about", 1)
     }
 
     function visibleApps() {
@@ -1271,22 +1292,15 @@ ShellRoot {
                             }
                         }
 
-                        RowLayout {
+                        Style.NavigationItem {
                             Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceMd
-
-                            Style.IconButton {
-                                icon: "\ue40a"
-                                active: Style.Theme.caelestiaThemeAvailable
-                                interactive: false
-                            }
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                Text { text: "Caelestia WebApps"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBody; font.weight: Font.DemiBold }
-                                Text { text: root.runtimeStatusText; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontLabel }
-                            }
+                            label: "Über"
+                            description: "Projektinformationen und Credits"
+                            icon: "\ue88e"
+                            selected: root.mainPage === "about"
+                            firstInGroup: true
+                            lastInGroup: true
+                            onClicked: root.openAbout()
                         }
                     }
                 }
@@ -2061,6 +2075,145 @@ ShellRoot {
                             font.pixelSize: Style.Tokens.fontBodySmall
                         }
 
+                    }
+                }
+            }
+
+            Rectangle {
+                id: aboutPage
+                x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                y: 12
+                width: parent.width - x - 12
+                height: parent.height - 24
+                visible: true
+                enabled: root.displayedMainPage === "about" && opacity > 0.01
+                opacity: 0
+                radius: Style.Tokens.radiusMainSurface
+                color: Style.Theme.mainSurface
+                clip: true
+                z: root.displayedMainPage === "about" ? 53 : -1
+
+                transform: Translate {
+                    id: aboutPageTranslate
+                    x: 0
+                }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    spacing: Style.Tokens.spaceLg
+
+                    Style.PageHeader {
+                        title: "Über"
+                        showBack: false
+                    }
+
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        contentHeight: aboutColumn.implicitHeight
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ColumnLayout {
+                            id: aboutColumn
+                            width: parent.width
+                            spacing: Style.Tokens.spaceXs
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 218
+                                radius: Style.Tokens.radiusConnectedOuter
+                                color: Style.Theme.surfaceAlt
+
+                                ColumnLayout {
+                                    anchors.centerIn: parent
+                                    spacing: Style.Tokens.spaceSm
+
+                                    Text {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: "\ue30a"
+                                        color: Style.Theme.primary
+                                        font.family: "Material Symbols Rounded"
+                                        font.pixelSize: 72
+                                        font.weight: Font.Medium
+                                    }
+
+                                    Text {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: "Caelestia WebApps"
+                                        color: Style.Theme.textPrimary
+                                        font.pixelSize: Style.Tokens.fontDisplay
+                                        font.weight: Font.Medium
+                                    }
+
+                                    Text {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        text: "v" + root.projectVersion
+                                        color: Style.Theme.textMuted
+                                        font.pixelSize: Style.Tokens.fontBodyLarge
+                                    }
+                                }
+                            }
+
+                            Style.SectionHeader { text: "Projekt" }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: Style.Tokens.spaceXs
+
+                                Style.SettingsInfoRow {
+                                    label: "Entwickelt von"
+                                    value: "psdl76"
+                                    firstInGroup: true
+                                }
+                                Style.SettingsInfoRow {
+                                    label: "Zweck"
+                                    value: "WebApps für Hyprland und Caelestia"
+                                    lastInGroup: true
+                                }
+                            }
+
+                            Style.SectionHeader { text: "Technik" }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: Style.Tokens.spaceXs
+
+                                Style.SettingsInfoRow {
+                                    label: "Manager"
+                                    value: "QML · Quickshell"
+                                    firstInGroup: true
+                                }
+                                Style.SettingsInfoRow {
+                                    label: "WebApp-Laufzeit"
+                                    value: "Firefox · Hyprland"
+                                }
+                                Style.SettingsInfoRow {
+                                    label: "Designvorbild"
+                                    value: "Caelestia Shell · Nexus"
+                                    lastInGroup: true
+                                }
+                            }
+
+                            Style.SectionHeader { text: "Schnittstellen" }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: Style.Tokens.spaceXs
+
+                                Style.SettingsInfoRow {
+                                    label: "CLI API"
+                                    value: "v1"
+                                    firstInGroup: true
+                                }
+                                Style.SettingsInfoRow {
+                                    label: "Katalogschema"
+                                    value: "v2"
+                                    lastInGroup: true
+                                }
+                            }
+                        }
                     }
                 }
             }

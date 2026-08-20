@@ -13,7 +13,8 @@ Read in this order:
 7. `docs/phases/phase-17/PHASE17_3_NEXUS_MOTION_GROUPING.md`
 8. `docs/phases/phase-17/PHASE17_4_SUBPAGE_CONSISTENCY.md`
 9. `docs/phases/phase-17/PHASE17_5_WEBAPP_INFO_NAVIGATION.md`
+10. `docs/phases/phase-17/PHASE17_6_ABOUT_PAGE.md`
 
-Phase 16.8 is accepted and frozen. Phase 17.5 is the active, explicitly approved
+Phase 16.8 is accepted and frozen. Phase 17.6 is the active, explicitly approved
 Manager redesign based on the Caelestia Nexus settings layout. It must not alter
 the frozen CLI, lifecycle, applet or capability contracts.

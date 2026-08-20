@@ -30,6 +30,7 @@ The baseline represented by this workspace is:
 - Phase 17.3 — Nexus motion and connected action grouping: IMPLEMENTATION CANDIDATE / WIP
 - Phase 17.4 — consistent Nexus Manager subpages: IMPLEMENTATION CANDIDATE / WIP
 - Phase 17.5 — Nexus AllApps/WebApp-Info navigation: IMPLEMENTATION CANDIDATE / WIP
+- Phase 17.6 — Nexus-style About page: IMPLEMENTATION CANDIDATE / WIP
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 

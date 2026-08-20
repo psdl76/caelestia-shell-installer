@@ -7,12 +7,14 @@ RowLayout {
     property string title: ""
     property string subtitle: ""
     property bool interactive: true
+    property bool showBack: true
     signal back()
 
     Layout.fillWidth: true
     spacing: Tokens.spaceLg
 
     IconButton {
+        visible: root.showBack
         icon: "\ue5c4"
         interactive: root.interactive
         onClicked: root.back()
