@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+THEME="$ROOT/manager/style/Theme.qml"
+QML="$ROOT/manager/shell.qml"
+grep -Fq 'property FileView themeReader: FileView {' "$THEME"
+grep -Fq 'watchChanges: true' "$THEME"
+grep -Fq '/caelestia/theme/caelestia-webapps.json' "$THEME"
+grep -Fq 'colour("primary"' "$THEME"
+grep -Fq 'colour("onSurface"' "$THEME"
+grep -Fq 'property bool caelestiaThemeAvailable: false' "$THEME"
+grep -Fq 'Caelestia Theme aktiv' "$QML"
+grep -Fq 'Manager-Fallback-Theme aktiv' "$QML"
+! grep -Eq 'import qs\.services|import Caelestia(\.|$)' "$THEME"
+echo "PASS: Theme live-watches Caelestia palette without private Shell imports"

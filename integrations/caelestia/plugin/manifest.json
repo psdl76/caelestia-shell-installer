@@ -1,0 +1,79 @@
+{
+  "name": "webapps",
+  "author": "caelestia_webapps",
+  "version": "0.9.3",
+  "description": "Quick access to Caelestia WebApps from the Caelestia bar.",
+  "requires": ">=2.2.0",
+  "entryPoints": [
+    {
+      "type": "bar-entry",
+      "source": "WebAppsBarEntry.qml",
+      "properties": {
+        "name": "webapps"
+      }
+    },
+    {
+      "type": "bar-popout",
+      "source": "WebAppsPopout.qml",
+      "properties": {
+        "entry": "webapps"
+      }
+    },
+    {
+      "type": "bar-entry",
+      "source": "WhatsAppBarEntry.qml",
+      "properties": {
+        "name": "webapp-whatsapp"
+      }
+    },
+    {
+      "type": "bar-popout",
+      "source": "WhatsAppPopout.qml",
+      "properties": {
+        "entry": "webapp-whatsapp"
+      }
+    },
+    {
+      "type": "bar-entry",
+      "source": "GoogleMessagesBarEntry.qml",
+      "properties": {
+        "name": "webapp-google-messages"
+      }
+    },
+    {
+      "type": "bar-popout",
+      "source": "GoogleMessagesPopout.qml",
+      "properties": {
+        "entry": "webapp-google-messages"
+      }
+    },
+    {
+      "type": "bar-entry",
+      "source": "YouTubeBarEntry.qml",
+      "properties": {
+        "name": "webapp-youtube"
+      }
+    },
+    {
+      "type": "bar-popout",
+      "source": "YouTubePopout.qml",
+      "properties": {
+        "entry": "webapp-youtube"
+      }
+    },
+    {
+      "type": "bar-entry",
+      "source": "YouTubeMusicBarEntry.qml",
+      "properties": {
+        "name": "webapp-youtube-music"
+      }
+    },
+    {
+      "type": "bar-popout",
+      "source": "YouTubeMusicPopout.qml",
+      "properties": {
+        "entry": "webapp-youtube-music"
+      }
+    }
+  ]
+}

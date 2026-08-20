@@ -1,0 +1,16 @@
+VERSION
+apps
+assets
+bin
+config
+data
+lib
+manager
+scripts
+templates
+catalog.sh
+install.sh
+repair.sh
+uninstall.sh
+upgrade.sh
+manager.sh

@@ -1,0 +1,32 @@
+/*
+ * Caelestia Web App - Firefox App Mode
+ * This file only affects the dedicated Firefox profile.
+ */
+
+#TabsToolbar {
+    visibility: collapse !important;
+}
+
+#nav-bar {
+    visibility: collapse !important;
+}
+
+#PersonalToolbar {
+    visibility: collapse !important;
+}
+
+#toolbar-menubar {
+    visibility: collapse !important;
+}
+
+#sidebar-header {
+    display: none !important;
+}
+
+#navigator-toolbox {
+    border: none !important;
+}
+
+#fullscreen-warning {
+    display: none !important;
+}

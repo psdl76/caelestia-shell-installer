@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Caelestia WebApps
+GenericName=WebApp Manager
+Comment=Manage Firefox-based WebApps for Hyprland and Caelestia
+Exec=caelestia-webapps-manager
+Icon=applications-internet
+Terminal=false
+Categories=Network;Utility;
+StartupNotify=false

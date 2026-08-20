@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+QML="$ROOT/manager/shell.qml"
+grep -Fq 'label: "WebApp"' "$QML"
+grep -Fq 'icon: "\ue145"' "$QML"
+grep -Fq 'function openCreateWizard()' "$QML"
+grep -Fq 'function openEditWizard(app)' "$QML"
+grep -Fq 'function submitWizard()' "$QML"
+grep -Fq '"user-create"' "$QML"
+grep -Fq '"user-update"' "$QML"
+grep -Fq 'modelData.source === "user"' "$QML"
+grep -Fq 'Eigene Apps werden getrennt unter ~/.config/caelestia-webapps/apps gespeichert.' "$QML"
+! grep -Eq 'install\.sh|repair\.sh|uninstall\.sh|hyprctl|firefox' "$QML"
+echo "PASS: Add/Edit Wizard uses stable CLI API and exposes Edit only for user apps"

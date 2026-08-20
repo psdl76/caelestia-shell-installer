@@ -1,0 +1,29 @@
+# Local/private package prototype for Phase 13.
+# Select a real project license before public AUR publication.
+pkgname=caelestia-webapps
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="Firefox-based WebApp manager for Hyprland and Caelestia"
+arch=('any')
+url="https://github.com/OWNER/caelestia-webapps"
+license=('custom')
+depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell')
+optdepends=(
+  'desktop-file-utils: refresh desktop application database'
+  'gtk-update-icon-cache: refresh hicolor icon cache for installed WebApp icons'
+)
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+  local src="$srcdir/$pkgname-$pkgver"
+  local core="$pkgdir/usr/lib/$pkgname"
+
+  install -dm755 "$core"
+  cp -a     "$src/VERSION"     "$src/apps"     "$src/assets"     "$src/bin"     "$src/config"     "$src/data"     "$src/lib"     "$src/manager"     "$src/scripts"     "$src/templates"     "$src/catalog.sh"     "$src/install.sh"     "$src/repair.sh"     "$src/uninstall.sh"     "$src/upgrade.sh"     "$src/manager.sh"     "$core/"
+
+  install -Dm755 "$src/packaging/arch/wrappers/caelestia-webapps"     "$pkgdir/usr/bin/caelestia-webapps"
+  install -Dm755 "$src/packaging/arch/wrappers/caelestia-webapps-manager"     "$pkgdir/usr/bin/caelestia-webapps-manager"
+  install -Dm644 "$src/packaging/caelestia-webapps-manager.desktop"     "$pkgdir/usr/share/applications/caelestia-webapps-manager.desktop"
+  install -Dm644 "$src/packaging/LICENSE-PENDING.txt"     "$pkgdir/usr/share/licenses/$pkgname/LICENSE-PENDING"
+}

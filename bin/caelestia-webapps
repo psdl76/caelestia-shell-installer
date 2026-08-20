@@ -1,0 +1,1925 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import contextlib
+import fcntl
+import json
+import os
+import base64
+import hashlib
+import socket
+import struct
+import signal
+import shutil
+import subprocess
+import sys
+import time
+import tempfile
+from pathlib import Path
+from urllib.parse import urlparse
+from typing import Any
+
+API_VERSION = 1
+EXIT_OK = 0
+EXIT_USAGE = 2
+EXIT_UNKNOWN_APP = 10
+EXIT_NOT_INSTALLED = 11
+EXIT_LAUNCHER_MISSING = 12
+EXIT_CATALOG_ERROR = 20
+EXIT_ACTION_FAILED = 30
+EXIT_ACTION_BUSY = 31
+EXIT_ACTION_TIMEOUT = 32
+LOCK_BUSY_EXIT = 75
+
+ROOT = Path(__file__).resolve().parent.parent
+APP_DIR = ROOT / "apps"
+CATALOG_SCRIPT = ROOT / "catalog.sh"
+INSTALL_SCRIPT = ROOT / "install.sh"
+REPAIR_SCRIPT = ROOT / "repair.sh"
+UNINSTALL_SCRIPT = ROOT / "uninstall.sh"
+USER_APPS_TOOL = ROOT / "scripts/user_apps.py"
+NOTIFICATION_WATCH_TOOL = ROOT / "scripts/notification_watch.py"
+DEFINITION_VALIDATOR = ROOT / "scripts/validate_definitions.py"
+APPLET_REGISTRY_GENERATOR = ROOT / "scripts/generate_applet_registry.py"
+APPLET_REGISTRY_VALIDATOR = ROOT / "scripts/validate_applet_registry.py"
+APPLET_IMPLEMENTATION_VALIDATOR = ROOT / "scripts/validate_applet_implementations.py"
+APPLET_RUNTIME_SOURCE_VALIDATOR = ROOT / "scripts/validate_applet_runtime_sources.py"
+CATALOG_FILE = Path.home() / ".local/share/caelestia-webapps/catalog.json"
+APPLET_REGISTRY_FILE = Path.home() / ".local/share/caelestia-webapps/applet-registry.json"
+
+
+def _lock_path() -> Path:
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "").strip()
+    if runtime:
+        return Path(runtime) / "caelestia-webapps" / "mutation.lock"
+    return Path.home() / ".local/state/caelestia-webapps/locks/mutation.lock"
+
+@contextlib.contextmanager
+def engine_lock(command: str, exclusive: bool):
+    inherited = os.environ.get("CAELESTIA_WEBAPPS_LOCK_HELD", "")
+    if inherited == "exclusive" or (not exclusive and inherited == "shared"):
+        yield
+        return
+    path = _lock_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    timeout = max(float(os.environ.get("CAELESTIA_WEBAPPS_LOCK_TIMEOUT_SECONDS", "2")), 0.0)
+    deadline = time.monotonic() + timeout
+    mode = fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH
+    with path.open("a+") as handle:
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), mode | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    error(command, "action_busy", "Eine andere WebApps-Aktion läuft bereits.", EXIT_ACTION_BUSY)
+                time.sleep(0.05)
+        old = os.environ.get("CAELESTIA_WEBAPPS_LOCK_HELD")
+        os.environ["CAELESTIA_WEBAPPS_LOCK_HELD"] = "exclusive" if exclusive else "shared"
+        try:
+            yield
+        finally:
+            if old is None:
+                os.environ.pop("CAELESTIA_WEBAPPS_LOCK_HELD", None)
+            else:
+                os.environ["CAELESTIA_WEBAPPS_LOCK_HELD"] = old
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def run_action_capture(command: str, argv: list[str]) -> subprocess.CompletedProcess[str]:
+    timeout = max(float(os.environ.get("CAELESTIA_WEBAPPS_ACTION_TIMEOUT_SECONDS", "120")), 1.0)
+    try:
+        proc = subprocess.Popen(
+            argv,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=os.environ.copy(),
+            start_new_session=True,
+        )
+    except OSError:
+        error(command, "action_unavailable", f"Engine-Aktion '{command}' konnte nicht gestartet werden.", EXIT_ACTION_FAILED)
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+            proc.communicate(timeout=2.0)
+        except (ProcessLookupError, subprocess.TimeoutExpired):
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.communicate()
+        error(command, "action_timeout", f"Engine-Aktion '{command}' hat das Zeitlimit überschritten.", EXIT_ACTION_TIMEOUT)
+    return subprocess.CompletedProcess(argv, proc.returncode, stdout, stderr)
+
+def emit(payload: dict[str, Any], exit_code: int = EXIT_OK) -> "NoReturn":
+    payload = {"apiVersion": API_VERSION, **payload}
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=False))
+    raise SystemExit(exit_code)
+
+
+def success(command: str, data: Any = None, message: str | None = None) -> "NoReturn":
+    payload: dict[str, Any] = {"ok": True, "command": command}
+    if message is not None:
+        payload["message"] = message
+    if data is not None:
+        payload["data"] = data
+    emit(payload, EXIT_OK)
+
+
+def error(command: str, code: str, message: str, exit_code: int) -> "NoReturn":
+    emit(
+        {
+            "ok": False,
+            "command": command,
+            "error": {"code": code, "message": message},
+        },
+        exit_code,
+    )
+
+
+def known_app(app_id: str) -> bool:
+    if not app_id:
+        return False
+    try:
+        catalog = load_catalog()
+    except SystemExit:
+        return False
+    return any(
+        isinstance(app, dict) and app.get("id") == app_id
+        for app in catalog.get("apps", [])
+    )
+
+
+def require_known_app(command: str, app_id: str) -> None:
+    if not known_app(app_id):
+        error(command, "unknown_app", f"Unbekannte App-ID: {app_id}", EXIT_UNKNOWN_APP)
+
+
+def run_capture(argv: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        argv,
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        env=os.environ.copy(),
+    )
+
+
+def load_catalog() -> dict[str, Any]:
+    # Normal catalog reads are strictly read-only. Bootstrap the persisted
+    # catalog+registry pair only when it does not exist yet, and do so under
+    # the exclusive mutation lock before entering the shared read section.
+    if not CATALOG_FILE.is_file() or not APPLET_REGISTRY_FILE.is_file():
+        with engine_lock("catalog-bootstrap", exclusive=True):
+            if not CATALOG_FILE.is_file() or not APPLET_REGISTRY_FILE.is_file():
+                rebuilt = run_capture([str(CATALOG_SCRIPT), "rebuild"])
+                if rebuilt.returncode != 0:
+                    error("catalog", "catalog_error", rebuilt.stderr.strip() or "Katalog konnte nicht erzeugt werden.", EXIT_CATALOG_ERROR)
+    with engine_lock("catalog", exclusive=False):
+        proc = run_capture([str(CATALOG_SCRIPT), "json"])
+    if proc.returncode != 0:
+        error("catalog", "catalog_error", "Katalog konnte nicht erzeugt werden.", EXIT_CATALOG_ERROR)
+    try:
+        payload = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        error("catalog", "invalid_catalog", "Katalog enthält kein gültiges JSON.", EXIT_CATALOG_ERROR)
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schemaVersion") != 2
+        or not isinstance(payload.get("categories"), list)
+        or not isinstance(payload.get("apps"), list)
+    ):
+        error("catalog", "invalid_catalog", "Katalog besitzt nicht das erwartete Schema v2.", EXIT_CATALOG_ERROR)
+    return payload
+
+
+
+def load_applet_registry() -> dict[str, Any]:
+    """Load the persisted Phase 16.3 registry produced by catalog.sh.
+
+    Runtime consumers must use this persisted projection as the sole
+    source for applet integration metadata.
+    """
+    if not APPLET_REGISTRY_FILE.is_file():
+        load_catalog()
+    try:
+        registry = json.loads(APPLET_REGISTRY_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        error("applet-registry", "invalid_registry", "Persistierte Applet Registry fehlt oder enthält kein gültiges JSON.", EXIT_CATALOG_ERROR)
+    if not isinstance(registry, dict) or registry.get("schemaVersion") != 1 or not isinstance(registry.get("apps"), list):
+        error("applet-registry", "invalid_registry", "Applet Registry besitzt nicht das erwartete Schema v1.", EXIT_CATALOG_ERROR)
+    return registry
+
+
+def applet_registry_index() -> dict[str, dict[str, Any]]:
+    registry = load_applet_registry()
+    return {
+        str(item.get("id")): item
+        for item in registry.get("apps", [])
+        if isinstance(item, dict) and item.get("id")
+    }
+
+def applet_runtime_entry(command: str, app_id: str) -> dict[str, Any]:
+    """Return the authoritative Phase 16.3 runtime metadata for one applet.
+
+    Applet runtime code must not reconstruct adapter metadata from catalog.json.
+    The catalog remains the product/store model; applet-registry.json is the
+    sole runtime projection for applet integration metadata.
+    """
+    entry = applet_registry_index().get(app_id)
+    if not isinstance(entry, dict):
+        error(command, "applet_not_available", f"App {app_id} besitzt keine Applet-Runtime-Registry.", EXIT_CATALOG_ERROR)
+    return entry
+
+def app_from_catalog(command: str, app_id: str) -> dict[str, Any]:
+    require_known_app(command, app_id)
+    catalog = load_catalog()
+    for app in catalog["apps"]:
+        if isinstance(app, dict) and app.get("id") == app_id:
+            return app
+    error(command, "catalog_mismatch", f"App {app_id} fehlt im Katalog.", EXIT_CATALOG_ERROR)
+
+
+
+def hyprland_window_state(catalog: dict[str, Any]) -> dict[str, Any]:
+    """Return transient running state without writing it into catalog.json."""
+    classes = {
+        str(app.get("id", "")): str(app.get("windowClass", "")).casefold()
+        for app in catalog.get("apps", [])
+        if isinstance(app, dict) and app.get("id")
+    }
+    state: dict[str, dict[str, Any]] = {
+        app_id: {"running": False, "windowCount": 0}
+        for app_id in classes
+    }
+
+    try:
+        proc = subprocess.run(
+            ["hyprctl", "clients", "-j"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=1.5,
+            env=os.environ.copy(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return {"available": False, "apps": state}
+
+    if proc.returncode != 0:
+        return {"available": False, "apps": state}
+
+    try:
+        clients = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return {"available": False, "apps": state}
+
+    if not isinstance(clients, list):
+        return {"available": False, "apps": state}
+
+    for client in clients:
+        if not isinstance(client, dict):
+            continue
+        observed = {
+            str(client.get("class", "")).casefold(),
+            str(client.get("initialClass", "")).casefold(),
+        }
+        observed.discard("")
+        if not observed:
+            continue
+        for app_id, window_class in classes.items():
+            if window_class and window_class in observed:
+                state[app_id]["windowCount"] += 1
+                state[app_id]["running"] = True
+
+    return {"available": True, "apps": state}
+
+
+def runtime_state(
+    app: dict[str, Any], transient: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    app_id = str(app["id"])
+    data_root = Path.home() / ".local/share/caelestia-webapps" / "apps" / app_id
+    launcher = Path(str(app.get("launcher", "")))
+    setup_launcher = Path(str(app.get("setupLauncher", "")))
+    transient_app = (transient or {}).get("apps", {}).get(
+        app_id, {"running": False, "windowCount": 0}
+    )
+    return {
+        "installed": bool(app.get("installed", False)),
+        "metadataExists": (data_root / "installed.conf").is_file(),
+        "profileExists": (data_root / "profile").is_dir(),
+        "launcherExists": launcher.is_file(),
+        "launcherExecutable": os.access(launcher, os.X_OK) if launcher else False,
+        "setupLauncherExists": setup_launcher.is_file(),
+        "setupLauncherExecutable": os.access(setup_launcher, os.X_OK) if setup_launcher else False,
+        "runningStateAvailable": bool((transient or {}).get("available", False)),
+        "running": bool(transient_app.get("running", False)),
+        "windowCount": int(transient_app.get("windowCount", 0)),
+    }
+
+
+
+def matching_hyprland_windows(catalog: dict[str, Any], app_id: str) -> list[str]:
+    app = next(
+        (
+            item
+            for item in catalog.get("apps", [])
+            if isinstance(item, dict) and item.get("id") == app_id
+        ),
+        None,
+    )
+    if app is None:
+        return []
+
+    window_class = str(app.get("windowClass", "")).casefold()
+    if not window_class:
+        return []
+
+    try:
+        proc = run_capture(["hyprctl", "clients", "-j"])
+    except OSError:
+        return []
+
+    if proc.returncode != 0:
+        return []
+
+    try:
+        clients = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return []
+
+    result: list[str] = []
+    if not isinstance(clients, list):
+        return result
+
+    for client in clients:
+        if not isinstance(client, dict):
+            continue
+        observed = {
+            str(client.get("class", "")).casefold(),
+            str(client.get("initialClass", "")).casefold(),
+        }
+        address = str(client.get("address", "")).strip()
+        if window_class in observed and address:
+            result.append(address)
+    return result
+
+
+def graceful_close_windows(command: str, app_id: str, timeout_seconds: float = 6.0) -> None:
+    catalog = load_catalog()
+    addresses = matching_hyprland_windows(catalog, app_id)
+    if not addresses:
+        return
+
+    for address in addresses:
+        selector = f"address:{address}"
+        expression = f'hl.dsp.window.close({{ window = "{selector}" }})'
+        try:
+            proc = run_capture(["hyprctl", "dispatch", expression])
+        except OSError:
+            error(
+                command,
+                "window_close_unavailable",
+                "Hyprland konnte nicht zum Schließen der WebApp angesprochen werden.",
+                EXIT_ACTION_FAILED,
+            )
+        if proc.returncode != 0:
+            error(
+                command,
+                "window_close_failed",
+                "Das laufende WebApp-Fenster konnte nicht regulär geschlossen werden.",
+                EXIT_ACTION_FAILED,
+            )
+
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if not matching_hyprland_windows(load_catalog(), app_id):
+            return
+        time.sleep(0.15)
+
+    error(
+        command,
+        "window_close_timeout",
+        "Die WebApp ist noch geöffnet. Deinstallation wurde zur Sicherheit abgebrochen.",
+        EXIT_ACTION_FAILED,
+    )
+
+
+def close_and_uninstall(command: str, app_id: str) -> None:
+    require_known_app(command, app_id)
+    graceful_close_windows(command, app_id)
+    delegate_action(command, [str(UNINSTALL_SCRIPT), app_id], app_id)
+
+
+
+def running_feed_payload() -> dict[str, Any]:
+    """Return transient Hyprland running state for all catalog WebApps."""
+    catalog = load_catalog()
+    transient = hyprland_window_state(catalog)
+    apps = []
+    for app in catalog.get("apps", []):
+        if not isinstance(app, dict) or not app.get("id"):
+            continue
+        app_id = str(app["id"])
+        state = transient.get("apps", {}).get(
+            app_id, {"running": False, "windowCount": 0}
+        )
+        apps.append({
+            "appId": app_id,
+            "running": bool(state.get("running", False)),
+            "windowCount": int(state.get("windowCount", 0)),
+        })
+    return {
+        "available": bool(transient.get("available", False)),
+        "apps": apps,
+    }
+
+
+def status_payload(app_id: str) -> dict[str, Any]:
+    catalog = load_catalog()
+    require_known_app("status", app_id)
+    app = next(
+        (
+            item
+            for item in catalog["apps"]
+            if isinstance(item, dict) and item.get("id") == app_id
+        ),
+        None,
+    )
+    if app is None:
+        error("status", "catalog_mismatch", f"App {app_id} fehlt im Katalog.", EXIT_CATALOG_ERROR)
+    transient = hyprland_window_state(catalog)
+    return {"app": app, "runtime": runtime_state(app, transient)}
+
+
+
+
+
+def _notification_state_path() -> Path:
+    base = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")))
+    return base / "caelestia-webapps" / "notification-events.json"
+
+
+def _notification_watcher_pid_path() -> Path:
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "").strip()
+    base = Path(runtime) if runtime else Path.home() / ".local/state"
+    return base / "caelestia-webapps" / "notification-watch.pid"
+
+
+def _pid_is_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except (ProcessLookupError, PermissionError):
+        return False
+    return True
+
+
+def ensure_notification_watcher() -> None:
+    """Best-effort singleton autostart for notification integrations.
+
+    status-feed is polled by the plugin, so it is a reliable public runtime
+    boundary. The watcher itself owns an advisory singleton lock; the pid file
+    only avoids spawning short-lived contenders on every poll.
+    """
+    pid_path = _notification_watcher_pid_path()
+    try:
+        pid = int(pid_path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        pid = 0
+    if _pid_is_alive(pid):
+        return
+
+    try:
+        subprocess.Popen(
+            [sys.executable, str(NOTIFICATION_WATCH_TOOL), "--quiet"],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=os.environ.copy(),
+            start_new_session=True,
+            close_fds=True,
+        )
+    except OSError:
+        return
+
+
+def notification_items_for_app(app_id: str) -> list[dict[str, Any]]:
+    path = _notification_state_path()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    events = payload.get("events", []) if isinstance(payload, dict) else []
+    if not isinstance(events, list):
+        return []
+    now = int(time.time())
+    ttl = 6 * 60 * 60
+    result = [
+        item for item in events
+        if isinstance(item, dict)
+        and str(item.get("appId", "")) == app_id
+        and now - int(item.get("timestamp", 0) or 0) <= ttl
+    ]
+    result.sort(key=lambda item: int(item.get("timestamp", 0) or 0), reverse=True)
+    return result[:20]
+
+
+
+def _playerctl(args: list[str], timeout: float = 1.5) -> tuple[int, str]:
+    try:
+        proc = subprocess.run(
+            ["playerctl", *args],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=timeout,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return 127, ""
+    return proc.returncode, proc.stdout.strip()
+
+
+def _normalise_host(value: str) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+
+    # urlparse() treats a bare hostname (e.g. "youtube.com") as a path and
+    # therefore exposes no .hostname. Registry matchHosts intentionally store
+    # hostnames rather than full URLs, so parse bare hosts through a temporary
+    # scheme-relative form while preserving normal URL handling.
+    candidate = raw if "://" in raw or raw.startswith("//") else f"//{raw}"
+    try:
+        host = (urlparse(candidate).hostname or "").lower().strip(".")
+    except ValueError:
+        return ""
+    return host[4:] if host.startswith("www.") else host
+
+
+def _state_root() -> Path:
+    return Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "caelestia-webapps"
+
+
+
+
+def _applet_activation_path() -> Path:
+    return _state_root() / "applets.json"
+
+
+def _read_applet_activation_overrides() -> dict[str, bool]:
+    path = _applet_activation_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict) or data.get("schemaVersion", 1) != 1:
+        return {}
+    enabled = data.get("enabled", {})
+    if not isinstance(enabled, dict):
+        return {}
+    return {str(key): bool(value) for key, value in enabled.items()}
+
+
+def applet_activation_available(entry: dict[str, Any]) -> bool:
+    # Phase 16.5 only exposes activation for implementations that are already
+    # part of the supported runtime mapping. Experimental registry entries are
+    # intentionally not presented as activatable until an implementation exists.
+    return str(entry.get("support", "")) == "supported"
+
+
+def applet_enabled(app_id: str, entry: dict[str, Any] | None = None) -> bool:
+    runtime_entry = entry if isinstance(entry, dict) else applet_runtime_entry("applet-state", app_id)
+    overrides = _read_applet_activation_overrides()
+    if app_id in overrides:
+        return bool(overrides[app_id])
+    return bool(runtime_entry.get("defaultEnabled", False))
+
+
+def set_applet_enabled(app_id: str, enabled: bool) -> None:
+    path = _applet_activation_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = {"schemaVersion": 1, "enabled": {}}
+    try:
+        current = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(current, dict):
+            data = current
+    except (OSError, json.JSONDecodeError):
+        pass
+    data["schemaVersion"] = 1
+    values = data.get("enabled")
+    if not isinstance(values, dict):
+        values = {}
+    values[app_id] = bool(enabled)
+    data["enabled"] = values
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def _applet_settings_path() -> Path:
+    return _state_root() / "applet-settings.json"
+
+
+def _read_applet_settings_overrides() -> dict[str, dict[str, bool]]:
+    path = _applet_settings_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(data, dict) or data.get("schemaVersion", 1) != 1:
+        return {}
+    apps = data.get("apps", {})
+    if not isinstance(apps, dict):
+        return {}
+    result: dict[str, dict[str, bool]] = {}
+    for app_id, values in apps.items():
+        if not isinstance(values, dict):
+            continue
+        result[str(app_id)] = {str(key): bool(value) for key, value in values.items()}
+    return result
+
+
+def applet_capability_enabled(app_id: str, capability: str, entry: dict[str, Any] | None = None) -> bool:
+    runtime_entry = entry if isinstance(entry, dict) else applet_runtime_entry("applet-settings", app_id)
+    capabilities = [str(value) for value in runtime_entry.get("capabilities", []) if value]
+    if capability not in capabilities:
+        return False
+    overrides = _read_applet_settings_overrides().get(app_id, {})
+    return bool(overrides.get(capability, True))
+
+
+def set_applet_capability(app_id: str, capability: str, enabled: bool, entry: dict[str, Any] | None = None) -> None:
+    runtime_entry = entry if isinstance(entry, dict) else applet_runtime_entry("applet-setting-set", app_id)
+    capabilities = [str(value) for value in runtime_entry.get("capabilities", []) if value]
+    if capability not in capabilities:
+        error("applet-setting-set", "unknown_capability", f"Applet {app_id} besitzt Capability {capability} nicht.", EXIT_ACTION_FAILED)
+    path = _applet_settings_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data: dict[str, Any] = {"schemaVersion": 1, "apps": {}}
+    try:
+        current = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(current, dict):
+            data = current
+    except (OSError, json.JSONDecodeError):
+        pass
+    data["schemaVersion"] = 1
+    apps = data.get("apps")
+    if not isinstance(apps, dict):
+        apps = {}
+    values = apps.get(app_id)
+    if not isinstance(values, dict):
+        values = {}
+    values[capability] = bool(enabled)
+    apps[app_id] = values
+    data["apps"] = apps
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def applet_settings_payload(app_id: str | None = None) -> dict[str, Any]:
+    registry = load_applet_registry()
+    items: list[dict[str, Any]] = []
+    for entry in registry.get("apps", []):
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        entry_id = str(entry["id"])
+        if app_id is not None and entry_id != app_id:
+            continue
+        capabilities = [str(value) for value in entry.get("capabilities", []) if value]
+        settings = {cap: applet_capability_enabled(entry_id, cap, entry) for cap in capabilities}
+        items.append({
+            "appId": entry_id,
+            "support": str(entry.get("support", "experimental")),
+            "capabilities": capabilities,
+            "settings": settings,
+        })
+    if app_id is not None and not items:
+        error("applet-settings", "applet_not_available", f"App {app_id} besitzt keine Applet-Runtime-Registry.", EXIT_CATALOG_ERROR)
+    return {"schemaVersion": 1, "apps": items}
+
+
+def applet_activation_payload(app_id: str | None = None) -> dict[str, Any]:
+    registry = load_applet_registry()
+    catalog = load_catalog()
+    installed = {
+        str(app.get("id")): bool(app.get("installed", False))
+        for app in catalog.get("apps", [])
+        if isinstance(app, dict) and app.get("id")
+    }
+    items = []
+    for entry in registry.get("apps", []):
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        entry_id = str(entry["id"])
+        if app_id is not None and entry_id != app_id:
+            continue
+        items.append({
+            "appId": entry_id,
+            "enabled": applet_enabled(entry_id, entry),
+            "activationAvailable": applet_activation_available(entry),
+            "installed": bool(installed.get(entry_id, False)),
+            "support": str(entry.get("support", "experimental")),
+        })
+    if app_id is not None and not items:
+        error("applet-state", "applet_not_available", f"App {app_id} besitzt keine Applet-Runtime-Registry.", EXIT_CATALOG_ERROR)
+    return {"schemaVersion": 1, "apps": items}
+
+def _pin_state_path() -> Path:
+    return _state_root() / "pins.json"
+
+
+def pin_state(app_id: str) -> bool:
+    path = _pin_state_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    pins = data.get("pins", {}) if isinstance(data, dict) else {}
+    return bool(pins.get(app_id, False)) if isinstance(pins, dict) else False
+
+
+def set_pin_state(app_id: str, enabled: bool) -> None:
+    path = _pin_state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    pins = data.get("pins")
+    if not isinstance(pins, dict):
+        pins = {}
+    pins[app_id] = bool(enabled)
+    data["pins"] = pins
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+
+
+def _ws_send_text(sock: socket.socket, payload: str) -> None:
+    data = payload.encode("utf-8")
+    first = 0x81
+    mask_key = os.urandom(4)
+    length = len(data)
+    if length < 126:
+        header = bytes([first, 0x80 | length])
+    elif length <= 0xFFFF:
+        header = bytes([first, 0x80 | 126]) + struct.pack("!H", length)
+    else:
+        header = bytes([first, 0x80 | 127]) + struct.pack("!Q", length)
+    masked = bytes(byte ^ mask_key[i % 4] for i, byte in enumerate(data))
+    sock.sendall(header + mask_key + masked)
+
+
+def _ws_recv_exact(sock: socket.socket, size: int) -> bytes:
+    chunks: list[bytes] = []
+    remaining = size
+    while remaining:
+        chunk = sock.recv(remaining)
+        if not chunk:
+            raise OSError("websocket_closed")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
+
+
+def _ws_send_control(sock: socket.socket, opcode: int, payload: bytes = b"") -> None:
+    if len(payload) > 125:
+        raise ValueError("websocket_control_payload_too_large")
+    mask_key = os.urandom(4)
+    header = bytes([0x80 | (opcode & 0x0F), 0x80 | len(payload)])
+    masked = bytes(byte ^ mask_key[i % 4] for i, byte in enumerate(payload))
+    sock.sendall(header + mask_key + masked)
+
+
+def _ws_recv_text(sock: socket.socket) -> str:
+    fragments: list[bytes] = []
+    while True:
+        first, second = _ws_recv_exact(sock, 2)
+        fin = bool(first & 0x80)
+        opcode = first & 0x0F
+        masked = bool(second & 0x80)
+        length = second & 0x7F
+        if length == 126:
+            length = struct.unpack("!H", _ws_recv_exact(sock, 2))[0]
+        elif length == 127:
+            length = struct.unpack("!Q", _ws_recv_exact(sock, 8))[0]
+        mask_key = _ws_recv_exact(sock, 4) if masked else b""
+        payload = _ws_recv_exact(sock, length)
+        if masked:
+            payload = bytes(byte ^ mask_key[i % 4] for i, byte in enumerate(payload))
+        if opcode == 0x8:
+            # Acknowledge an orderly close when possible.
+            try:
+                _ws_send_control(sock, 0x8, payload[:125])
+            except OSError:
+                pass
+            reason = payload[2:].decode("utf-8", errors="replace") if len(payload) >= 2 else ""
+            raise OSError(f"websocket_closed:{reason}" if reason else "websocket_closed")
+        if opcode == 0x9:
+            # RFC 6455 requires a pong carrying the same application data.
+            _ws_send_control(sock, 0xA, payload)
+            continue
+        if opcode == 0xA:
+            continue
+        if opcode in (0x1, 0x0):
+            fragments.append(payload)
+            if fin:
+                return b"".join(fragments).decode("utf-8")
+
+
+def _bidi_connect(port: int, timeout: float = 2.0) -> socket.socket:
+    sock = socket.create_connection(("127.0.0.1", port), timeout=timeout)
+    sock.settimeout(timeout)
+    key = base64.b64encode(os.urandom(16)).decode("ascii")
+    request = (
+        "GET /session HTTP/1.1\r\n"
+        f"Host: 127.0.0.1:{port}\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        f"Sec-WebSocket-Key: {key}\r\n"
+        "Sec-WebSocket-Version: 13\r\n\r\n"
+    )
+    sock.sendall(request.encode("ascii"))
+    response = bytearray()
+    while b"\r\n\r\n" not in response and len(response) < 16384:
+        chunk = sock.recv(4096)
+        if not chunk:
+            break
+        response.extend(chunk)
+    head = bytes(response).split(b"\r\n\r\n", 1)[0]
+    status_line = head.split(b"\r\n", 1)[0].decode("latin1", errors="replace")
+    if b" 101 " not in head.split(b"\r\n", 1)[0]:
+        sock.close()
+        raise OSError(f"websocket_upgrade_failed:{status_line}")
+    accept_expected = base64.b64encode(
+        hashlib.sha1((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").encode("ascii")).digest()
+    ).decode("ascii")
+    accept_actual = ""
+    for line in head.decode("latin1", errors="replace").split("\r\n")[1:]:
+        if line.lower().startswith("sec-websocket-accept:"):
+            accept_actual = line.split(":", 1)[1].strip()
+            break
+    if accept_actual != accept_expected:
+        sock.close()
+        raise OSError("websocket_accept_mismatch")
+    return sock
+
+
+def _bidi_command(
+    sock: socket.socket,
+    request_id: int,
+    method: str,
+    params: dict[str, Any],
+    timeout: float = 3.0,
+) -> dict[str, Any]:
+    _ws_send_text(sock, json.dumps({"id": request_id, "method": method, "params": params}, separators=(",", ":")))
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            payload = json.loads(_ws_recv_text(sock))
+        except socket.timeout:
+            continue
+        if isinstance(payload, dict) and payload.get("id") == request_id:
+            return payload
+    raise TimeoutError(method)
+
+
+def _bidi_error(reply: dict[str, Any]) -> str | None:
+    if reply.get("type") != "error" and "error" not in reply:
+        return None
+    code = str(reply.get("error", "webdriver-bidi-error"))
+    message = str(reply.get("message", "")).strip()
+    return f"{code}: {message}" if message else code
+
+
+def _browser_video_state_query(app: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    bridge = app.get("browserBridge") or {}
+    diagnostics: dict[str, Any] = {"stage": "configuration"}
+    if not isinstance(bridge, dict) or str(bridge.get("kind", "none")) != "webdriver-bidi":
+        diagnostics["error"] = "browser_bridge_disabled"
+        return None, diagnostics
+    try:
+        port = int(bridge.get("port", 0) or 0)
+    except (TypeError, ValueError):
+        diagnostics["error"] = "invalid_bridge_port"
+        return None, diagnostics
+    if port <= 0:
+        diagnostics["error"] = "invalid_bridge_port"
+        return None, diagnostics
+
+    diagnostics["port"] = port
+    match_hosts = [
+        _normalise_host(str(host))
+        for host in app.get("matchHosts", [])
+        if _normalise_host(str(host))
+    ]
+    app_host = match_hosts[0] if match_hosts else _normalise_host(str(app.get("url", "")))
+    expression = """(() => {
+      const video = document.querySelector('video.html5-main-video') || document.querySelector('video');
+      if (!video) return JSON.stringify({available:false, reason:'video_not_found'});
+      const r = video.getBoundingClientRect();
+      const vw = Math.max(1, document.documentElement.clientWidth || window.innerWidth || 1);
+      const vh = Math.max(1, document.documentElement.clientHeight || window.innerHeight || 1);
+      const duration = Number.isFinite(video.duration) ? Number(video.duration) : 0;
+      const position = Number.isFinite(video.currentTime) ? Number(video.currentTime) : 0;
+      return JSON.stringify({
+        available: r.width > 8 && r.height > 8,
+        x: Number(r.left), y: Number(r.top), width: Number(r.width), height: Number(r.height),
+        viewportWidth: Number(vw), viewportHeight: Number(vh),
+        position, duration, paused: Boolean(video.paused), ended: Boolean(video.ended)
+      });
+    })()"""
+
+    sock: socket.socket | None = None
+    session_created = False
+    next_id = 1
+    try:
+        diagnostics["stage"] = "connect"
+        sock = _bidi_connect(port)
+
+        diagnostics["stage"] = "session.new"
+        # Use the explicit spec shape rather than relying on defaults.
+        reply = _bidi_command(sock, next_id, "session.new", {
+            "capabilities": {"alwaysMatch": {}, "firstMatch": [{}]}
+        }, timeout=4.0)
+        next_id += 1
+        err = _bidi_error(reply)
+        if err:
+            diagnostics["error"] = err
+            return None, diagnostics
+        session_created = True
+        diagnostics["sessionId"] = str(reply.get("result", {}).get("sessionId", ""))
+
+        diagnostics["stage"] = "browsingContext.getTree"
+        tree = _bidi_command(sock, next_id, "browsingContext.getTree", {}, timeout=4.0)
+        next_id += 1
+        err = _bidi_error(tree)
+        if err:
+            diagnostics["error"] = err
+            return None, diagnostics
+        contexts = tree.get("result", {}).get("contexts", [])
+        candidates: list[dict[str, Any]] = []
+        all_contexts: list[dict[str, Any]] = []
+        stack = list(contexts) if isinstance(contexts, list) else []
+        while stack:
+            item = stack.pop(0)
+            if not isinstance(item, dict):
+                continue
+            children = item.get("children") or []
+            if isinstance(children, list):
+                stack.extend(children)
+            url = str(item.get("url", ""))
+            host = _normalise_host(url)
+            all_contexts.append({
+                "context": str(item.get("context", "")),
+                "url": url,
+                "host": host,
+            })
+            if app_host and (host == app_host or host.endswith("." + app_host)):
+                candidates.append(item)
+        diagnostics["matchHost"] = app_host
+        diagnostics["topLevelContexts"] = len(contexts) if isinstance(contexts, list) else 0
+        diagnostics["totalContexts"] = len(all_contexts)
+        diagnostics["matchingContexts"] = len(candidates)
+        diagnostics["contextSummaries"] = all_contexts[:32]
+        # Compatibility alias retained for older diagnostics consumers.
+        diagnostics["contexts"] = len(candidates)
+        if not candidates:
+            diagnostics["error"] = "matching_browsing_context_not_found"
+            return None, diagnostics
+        candidates.sort(key=lambda item: ("/watch" in str(item.get("url", "")), len(str(item.get("url", "")))), reverse=True)
+        context_id = str(candidates[0].get("context", ""))
+        diagnostics["contextUrl"] = str(candidates[0].get("url", ""))
+        if not context_id:
+            diagnostics["error"] = "matching_context_has_no_id"
+            return None, diagnostics
+
+        diagnostics["stage"] = "script.evaluate"
+        evaluated = _bidi_command(sock, next_id, "script.evaluate", {
+            "expression": expression,
+            "target": {"context": context_id},
+            "awaitPromise": False,
+        }, timeout=4.0)
+        next_id += 1
+        err = _bidi_error(evaluated)
+        if err:
+            diagnostics["error"] = err
+            return None, diagnostics
+        remote = evaluated.get("result", {}).get("result", {})
+        value = remote.get("value") if isinstance(remote, dict) else None
+        if not isinstance(value, str):
+            diagnostics["error"] = "script_result_not_string"
+            return None, diagnostics
+        state = json.loads(value)
+        if not isinstance(state, dict) or not state.get("available"):
+            diagnostics["error"] = str(state.get("reason", "video_not_available")) if isinstance(state, dict) else "invalid_script_result"
+            return None, diagnostics
+        vw = max(float(state.get("viewportWidth", 0.0) or 0.0), 1.0)
+        vh = max(float(state.get("viewportHeight", 0.0) or 0.0), 1.0)
+        x = max(0.0, float(state.get("x", 0.0) or 0.0))
+        y = max(0.0, float(state.get("y", 0.0) or 0.0))
+        width = max(1.0, float(state.get("width", 0.0) or 0.0))
+        height = max(1.0, float(state.get("height", 0.0) or 0.0))
+        state["normalized"] = {
+            "x": max(0.0, min(1.0, x / vw)),
+            "y": max(0.0, min(1.0, y / vh)),
+            "width": max(0.01, min(1.0, width / vw)),
+            "height": max(0.01, min(1.0, height / vh)),
+        }
+        state["source"] = "firefox-webdriver-bidi"
+        diagnostics["stage"] = "complete"
+        diagnostics.pop("error", None)
+        return state, diagnostics
+    except (OSError, TimeoutError, ValueError, json.JSONDecodeError, KeyError, TypeError) as exc:
+        diagnostics["error"] = f"{type(exc).__name__}: {exc}"
+        return None, diagnostics
+    finally:
+        # Firefox currently supports a single active BiDi session. Merely
+        # closing the WebSocket unregisters the connection but does NOT delete
+        # the session, so every short-lived poll must explicitly session.end.
+        if sock is not None:
+            if session_created:
+                try:
+                    diagnostics["cleanup"] = "session.end"
+                    _bidi_command(sock, next_id, "session.end", {}, timeout=1.5)
+                except (OSError, TimeoutError, ValueError, json.JSONDecodeError, TypeError):
+                    diagnostics["cleanup"] = "session.end_failed"
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+
+def _browser_video_cache_paths(app_id: str) -> tuple[Path, Path]:
+    root = _state_root() / "browser-video"
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in app_id) or "unknown"
+    return root / f"{safe}.json", root / f"{safe}.lock"
+
+
+def _read_browser_video_cache(path: Path, max_age: float) -> dict[str, Any] | None:
+    try:
+        age = max(0.0, time.time() - path.stat().st_mtime)
+        if age > max_age:
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+    return data if isinstance(data, dict) and data.get("available") else None
+
+
+def _write_browser_video_cache(path: Path, state: dict[str, Any]) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(state, separators=(",", ":")), encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def _browser_video_state_result(app: dict[str, Any]) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Serialize short-lived Firefox BiDi polls and share a tiny good-state cache.
+
+    Multiple Caelestia surfaces can poll status-feed at the same time (bar entry,
+    transient popout, pinned preview). Firefox only permits one active BiDi
+    session, so uncoordinated subprocesses caused alternating successful/failed
+    crop reads. The visible symptom was the pinned preview flickering between the
+    correct video crop and the full YouTube window/comment column.
+    """
+    app_id = str(app.get("id", "unknown"))
+    cache_path, lock_path = _browser_video_cache_paths(app_id)
+    fresh_ttl = max(float(os.environ.get("CAELESTIA_WEBAPPS_VIDEO_CACHE_SECONDS", "0.9")), 0.0)
+    stale_ttl = max(float(os.environ.get("CAELESTIA_WEBAPPS_VIDEO_STALE_SECONDS", "5.0")), fresh_ttl)
+
+    cached = _read_browser_video_cache(cache_path, fresh_ttl)
+    if cached is not None:
+        return cached, {"stage": "cache", "cached": True, "appId": app_id}
+
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + max(float(os.environ.get("CAELESTIA_WEBAPPS_VIDEO_LOCK_TIMEOUT_SECONDS", "2.0")), 0.0)
+    with lock_path.open("a+") as handle:
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                # The other poll may have completed while we were waiting.
+                cached = _read_browser_video_cache(cache_path, fresh_ttl)
+                if cached is not None:
+                    return cached, {"stage": "cache-after-wait", "cached": True, "appId": app_id}
+                if time.monotonic() >= deadline:
+                    stale = _read_browser_video_cache(cache_path, stale_ttl)
+                    if stale is not None:
+                        return stale, {"stage": "stale-cache-lock-timeout", "cached": True, "stale": True, "appId": app_id}
+                    return None, {"stage": "lock", "error": "browser_video_poll_busy", "appId": app_id}
+                time.sleep(0.04)
+
+        try:
+            # Recheck after acquiring the lock: another process may just have
+            # produced the state we need, avoiding an unnecessary BiDi session.
+            cached = _read_browser_video_cache(cache_path, fresh_ttl)
+            if cached is not None:
+                return cached, {"stage": "cache-after-lock", "cached": True, "appId": app_id}
+
+            state, diagnostics = _browser_video_state_query(app)
+            if state is not None:
+                _write_browser_video_cache(cache_path, state)
+                diagnostics["cache"] = "updated"
+                return state, diagnostics
+
+            stale = _read_browser_video_cache(cache_path, stale_ttl)
+            if stale is not None:
+                merged = dict(diagnostics)
+                merged.update({"stage": "stale-cache-fallback", "cached": True, "stale": True, "upstreamStage": diagnostics.get("stage", "")})
+                return stale, merged
+            return None, diagnostics
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _browser_video_state(app: dict[str, Any]) -> dict[str, Any] | None:
+    state, _ = _browser_video_state_result(app)
+    return state
+
+def _media_candidate_for_player(player: str, registry_apps: list[dict[str, Any]]) -> tuple[dict[str, Any], str] | None:
+    rc, track_url = _playerctl(["-p", player, "metadata", "xesam:url"])
+    if rc != 0:
+        return None
+    track_host = _normalise_host(track_url)
+    if not track_host:
+        return None
+
+    # Resolve ownership exclusively from the applet registry. The most
+    # specific host wins, so music.youtube.com cannot be swallowed by the
+    # broader youtube.com entry.
+    candidates: list[tuple[int, int, dict[str, Any]]] = []
+    for entry in registry_apps:
+        if not isinstance(entry, dict) or str(entry.get("adapter", "none")) != "media":
+            continue
+        hosts = [
+            _normalise_host(str(host))
+            for host in entry.get("matchHosts", [])
+            if _normalise_host(str(host))
+        ]
+        best_host = ""
+        best_exact = False
+        for app_host in hosts:
+            exact = track_host == app_host
+            related = exact or track_host.endswith("." + app_host) or app_host.endswith("." + track_host)
+            if related and (not best_host or (exact, len(app_host)) > (best_exact, len(best_host))):
+                best_host = app_host
+                best_exact = exact
+        if not best_host:
+            continue
+        candidates.append((1 if best_exact else 0, len(best_host), entry))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return candidates[0][2], track_url
+
+def _media_state_for_player(player: str, track_url: str) -> dict[str, Any]:
+    _, title = _playerctl(["-p", player, "metadata", "xesam:title"])
+    _, artist = _playerctl(["-p", player, "metadata", "xesam:artist"])
+    _, album = _playerctl(["-p", player, "metadata", "xesam:album"])
+    _, artwork = _playerctl(["-p", player, "metadata", "mpris:artUrl"])
+    _, length_raw = _playerctl(["-p", player, "metadata", "mpris:length"])
+    _, position_raw = _playerctl(["-p", player, "position"])
+    _, playback = _playerctl(["-p", player, "status"])
+
+    playback_status = playback.strip().lower()
+    playing = playback_status == "playing"
+    progress = 0.0
+    position_seconds = 0.0
+    length_seconds = 0.0
+    try:
+        length_seconds = float(length_raw) / 1_000_000.0
+        position_seconds = float(position_raw)
+        if length_seconds > 0:
+            progress = max(0.0, min(1.0, position_seconds / length_seconds))
+    except (TypeError, ValueError):
+        progress = 0.0
+
+    return {
+        "title": title or "Wiedergabe",
+        "subtitle": artist or album,
+        "artist": artist,
+        "album": album,
+        "artwork": artwork,
+        "playing": playing,
+        "playbackStatus": playback_status or "unknown",
+        "progress": progress,
+        "position": position_seconds,
+        "duration": length_seconds,
+        "player": player,
+        "url": track_url,
+        "source": "mpris-playerctl",
+    }
+
+
+def _media_states_for_app(app: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return every MPRIS session that belongs to this WebApp.
+
+    Firefox can expose more than one MPRIS session for the same WebApp.  A
+    paused/stale session may appear before the actually playing session in
+    `playerctl -l`.  Treating the first match as authoritative makes the UI
+    show Play while audio is already running and can start a second session.
+    """
+    if shutil.which("playerctl") is None:
+        return []
+
+    rc, out = _playerctl(["-l"])
+    if rc != 0 or not out:
+        return []
+
+    registry_apps = [a for a in load_applet_registry().get("apps", []) if isinstance(a, dict)]
+    wanted_id = str(app.get("id", ""))
+    states: list[dict[str, Any]] = []
+
+    for player in [line.strip() for line in out.splitlines() if line.strip()]:
+        owner = _media_candidate_for_player(player, registry_apps)
+        if not owner:
+            continue
+        owner_app, track_url = owner
+        if str(owner_app.get("id", "")) != wanted_id:
+            continue
+        states.append(_media_state_for_player(player, track_url))
+
+    return states
+
+
+def _select_media_state(states: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not states:
+        return None
+
+    # The currently audible session must always win.  If none is playing,
+    # prefer Paused over Stopped/Unknown and then the session with the greatest
+    # known position. This keeps status and controls bound to one session.
+    rank = {"playing": 3, "paused": 2, "stopped": 1, "unknown": 0}
+    return max(
+        states,
+        key=lambda state: (
+            rank.get(str(state.get("playbackStatus", "unknown")), 0),
+            float(state.get("position", 0.0) or 0.0),
+        ),
+    )
+
+
+def media_status_for_app(app: dict[str, Any]) -> dict[str, Any] | None:
+    """Read the authoritative MPRIS session owned by this catalog WebApp.
+
+    Ownership is resolved globally across all media WebApps so a broad domain
+    such as youtube.com cannot steal the more specific music.youtube.com
+    player.  When Firefox exposes multiple sessions for one WebApp, the
+    actually Playing session wins over paused/stale sessions.
+    """
+    state = _select_media_state(_media_states_for_app(app))
+    if state is None:
+        return None
+    browser = _browser_video_state(app)
+    if browser is not None:
+        state["videoRect"] = browser.get("normalized", {})
+        state["videoViewport"] = {"width": browser.get("viewportWidth", 0), "height": browser.get("viewportHeight", 0)}
+        state["videoBridge"] = browser.get("source", "")
+        duration = float(browser.get("duration", 0.0) or 0.0)
+        position = float(browser.get("position", 0.0) or 0.0)
+        if duration > 0:
+            state["duration"] = duration
+            state["position"] = max(0.0, min(duration, position))
+            state["progress"] = max(0.0, min(1.0, state["position"] / duration))
+        state["domPlaying"] = not bool(browser.get("paused", True)) and not bool(browser.get("ended", False))
+    return state
+
+def media_control_for_app(app: dict[str, Any], action: str) -> tuple[bool, str]:
+    if action not in {"play-pause", "next", "previous"}:
+        return False, "unsupported_action"
+    media = media_status_for_app(app)
+    if not media:
+        return False, "player_not_found"
+    player = str(media.get("player", ""))
+    if not player:
+        return False, "player_not_found"
+    rc, _ = _playerctl(["-p", player, action], timeout=2.0)
+    return rc == 0, player
+
+def integration_status_payload(app: dict[str, Any]) -> dict[str, Any]:
+    """Return a normalized status-protocol envelope for one catalog app.
+
+    Phase 15.3b intentionally ships no real app-specific adapters yet. The
+    protocol remains useful for renderer development because it has a stable
+    inactive shape, plus an opt-in demo fixture controlled by environment
+    variables. Real adapters will replace only the source of `state` data.
+    """
+    app_id = str(app.get("id", ""))
+    integration = app
+    kind = str(integration.get("adapter", "none") or "none")
+    capabilities = integration.get("capabilities", [])
+    if not isinstance(capabilities, list):
+        capabilities = []
+    capabilities = [str(x) for x in capabilities if isinstance(x, str)]
+
+    payload: dict[str, Any] = {
+        "protocolVersion": 1,
+        "appId": app_id,
+        "kind": kind,
+        "available": False,
+        "stale": False,
+        "updatedAt": None,
+        "capabilities": capabilities,
+        "state": {},
+    }
+
+    demo_kind = os.environ.get("CAELESTIA_WEBAPPS_STATUS_DEMO", "").strip().lower()
+    demo_app = os.environ.get("CAELESTIA_WEBAPPS_STATUS_DEMO_APP", "whatsapp").strip() or "whatsapp"
+    demo_active = app_id == demo_app and demo_kind in {"notification", "media"}
+
+    now = int(time.time())
+    if not demo_active and kind == "notifications":
+        payload["kind"] = "notification"
+        items = notification_items_for_app(app_id)
+        if items:
+            payload["available"] = True
+            payload["updatedAt"] = int(items[0].get("timestamp", now) or now)
+            payload["capabilities"] = ["badge", "preview"]
+            payload["state"] = {
+                "count": len(items),
+                "title": str(items[0].get("title", "")),
+                "text": str(items[0].get("text", "")),
+                "items": items[:3],
+                "source": "freedesktop-notify",
+            }
+        return payload
+
+    if not demo_active and kind == "media":
+        media = media_status_for_app(app)
+        if media:
+            payload["available"] = True
+            payload["updatedAt"] = now
+            payload["capabilities"] = ["now_playing"]
+            payload["state"] = media
+        return payload
+
+    if not demo_active:
+        return payload
+
+    payload["kind"] = demo_kind
+    payload["available"] = True
+    payload["updatedAt"] = now
+    if demo_kind == "notification":
+        payload["capabilities"] = ["badge", "preview"]
+        # Protocol v1 remains backward-compatible: title/text mirror the newest
+        # item, while items enables a generic multi-event notification UI.
+        items = [
+            {
+                "id": "demo-1",
+                "title": "Demo Kontakt",
+                "text": "Das ist die neueste generische Nachrichtenvorschau.",
+                "timestamp": now,
+                "image": "",
+                "actions": [],
+            },
+            {
+                "id": "demo-2",
+                "title": "Familie",
+                "text": "Zweite Nachricht aus demselben generischen Adapter.",
+                "timestamp": now - 60,
+                "image": "",
+                "actions": [],
+            },
+            {
+                "id": "demo-3",
+                "title": "Caelestia",
+                "text": "Dritte Vorschau – ohne app-spezifischen Renderer.",
+                "timestamp": now - 120,
+                "image": "",
+                "actions": [],
+            },
+        ]
+        payload["state"] = {
+            "count": 5,
+            "title": items[0]["title"],
+            "text": items[0]["text"],
+            "items": items,
+        }
+    else:
+        payload["capabilities"] = ["now_playing", "playback_controls"]
+        payload["state"] = {
+            "title": "Demo Track",
+            "subtitle": "Demo Artist",
+            "artwork": "",
+            "playing": True,
+            "progress": 0.42,
+        }
+    return payload
+
+
+def integration_status_all() -> list[dict[str, Any]]:
+    registry = load_applet_registry()
+    return [
+        integration_status_payload(entry)
+        for entry in registry.get("apps", [])
+        if isinstance(entry, dict) and str(entry.get("adapter", "none")) != "none"
+    ]
+
+def delegate_action(command: str, argv: list[str], app_id: str | None = None) -> None:
+    proc = run_action_capture(command, argv)
+    if proc.returncode == LOCK_BUSY_EXIT:
+        error(command, "action_busy", "Eine andere WebApps-Aktion läuft bereits.", EXIT_ACTION_BUSY)
+    if proc.returncode != 0:
+        error(command, "action_failed", f"Engine-Aktion '{command}' ist fehlgeschlagen.", EXIT_ACTION_FAILED)
+    data: dict[str, Any] = {"exitCode": proc.returncode}
+    if app_id is not None:
+        # Refresh state after the engine operation. If the app was removed,
+        # status still exists because built-in definitions remain in the catalog.
+        app = app_from_catalog(command, app_id)
+        if command in {"uninstall", "uninstall-close"}:
+            try:
+                entry = applet_registry_index().get(app_id)
+                if isinstance(entry, dict):
+                    set_applet_enabled(app_id, False)
+            except Exception:
+                # Uninstall success must never be converted into a failure just
+                # because optional UI activation state could not be cleaned up.
+                pass
+        data["app"] = app
+        data["runtime"] = runtime_state(app)
+    success(command, data=data)
+
+
+
+def user_definition_action(command: str, argv: list[str]) -> None:
+    proc = run_action_capture(command, argv)
+    if proc.returncode == LOCK_BUSY_EXIT:
+        error(command, "action_busy", "Eine andere WebApps-Aktion läuft bereits.", EXIT_ACTION_BUSY)
+    if proc.returncode != 0:
+        try:
+            detail = json.loads(proc.stdout)
+            message = detail.get("error", {}).get("message", "User-App-Aktion fehlgeschlagen.")
+            code = detail.get("error", {}).get("code", "user_app_failed")
+        except Exception:
+            message = "User-App-Aktion fehlgeschlagen."
+            code = "user_app_failed"
+        error(command, str(code), str(message), EXIT_ACTION_FAILED)
+
+    try:
+        detail = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        error(command, "invalid_user_app_response", "User-App-Tool lieferte ungültiges JSON.", EXIT_ACTION_FAILED)
+
+    # User definition mutations change catalog membership/fields, so they must
+    # explicitly refresh the coupled catalog+registry pair before returning.
+    rebuilt = run_capture([str(CATALOG_SCRIPT), "rebuild"])
+    if rebuilt.returncode != 0:
+        error(command, "catalog_error", rebuilt.stderr.strip() or "Katalog und Applet Registry konnten nicht aktualisiert werden.", EXIT_CATALOG_ERROR)
+    catalog = load_catalog()
+    success(
+        command,
+        data={
+            "result": detail,
+            "schemaVersion": catalog.get("schemaVersion"),
+            "appCount": len(catalog.get("apps", [])),
+        },
+    )
+
+
+def launch_like(command: str, app_id: str, field: str) -> None:
+    app = app_from_catalog(command, app_id)
+    state = runtime_state(app)
+    if not state["installed"]:
+        error(command, "not_installed", f"{app_id} ist nicht installiert.", EXIT_NOT_INSTALLED)
+    launcher = Path(str(app.get(field, "")))
+    if not launcher.is_file() or not os.access(launcher, os.X_OK):
+        error(command, "launcher_missing", f"Launcher fehlt oder ist nicht ausführbar: {launcher}", EXIT_LAUNCHER_MISSING)
+    try:
+        proc = subprocess.Popen(
+            [str(launcher)],
+            cwd=Path.home(),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            close_fds=True,
+            env=os.environ.copy(),
+        )
+    except OSError:
+        error(command, "launch_failed", f"Launcher konnte nicht gestartet werden: {launcher}", EXIT_ACTION_FAILED)
+    success(command, data={"accepted": True, "appId": app_id, "pid": proc.pid})
+
+
+def usage(command: str = "") -> "NoReturn":
+    error(
+        command or "usage",
+        "usage",
+        "Verwendung: caelestia-webapps <list|validate-catalog [--json|--human]|applet-registry|applet-entry|validate-applet-registry|validate-applet-runtime|validate-applet-runtime-sources|status|running-feed|status-feed|browser-video-state|media-control|applet-state|applet-set|applet-settings|applet-setting-set|pin-state|pin-set|notification-watch|runtime|ownership|launch|setup|install|repair|uninstall|uninstall-close|refresh|user-create|user-update|user-delete> [app-id]",
+        EXIT_USAGE,
+    )
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    if not args:
+        usage()
+    command = args[0]
+
+    if command == "list":
+        if len(args) != 1:
+            usage(command)
+        catalog = load_catalog()
+        success(
+            command,
+            data={
+                "schemaVersion": catalog.get("schemaVersion"),
+                "categories": catalog.get("categories", []),
+                "apps": catalog.get("apps", []),
+            },
+        )
+
+    if command == "validate-catalog":
+        if len(args) > 2 or (len(args) == 2 and args[1] not in {"--json", "--human"}):
+            usage(command)
+        force_json = len(args) == 2 and args[1] == "--json"
+        force_human = len(args) == 2 and args[1] == "--human"
+        human = force_human or (not force_json and sys.stdout.isatty())
+
+        proc = run_capture([sys.executable, str(DEFINITION_VALIDATOR), str(ROOT)])
+        try:
+            definition_report = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            error(command, "validator_error", "Definition-Validator lieferte ungültige Daten.", EXIT_CATALOG_ERROR)
+
+        if proc.returncode != 0 or definition_report.get("ok") is not True:
+            violations = definition_report.get("violations", [])
+            if human:
+                print("Caelestia WebApps · Catalog Contract")
+                print(f"Contract: {definition_report.get('schemaContract', 'unknown')}")
+                print("Status:   FAIL")
+                print()
+                for item in violations[:10]:
+                    where = ".".join(str(x) for x in (item.get("app"), item.get("field")) if x) or "catalog"
+                    print(f"✗ {where}: {item.get('message', 'Schema-Contract verletzt.')}")
+                    if "expected" in item:
+                        print(f"  erwartet: {item.get('expected')}")
+                    if "actual" in item:
+                        print(f"  aktuell:  {item.get('actual')}")
+                if not violations:
+                    for item in definition_report.get("errors", [])[:10]:
+                        print(f"✗ {item}")
+                raise SystemExit(EXIT_CATALOG_ERROR)
+
+            parts = []
+            for item in violations[:5]:
+                where = ".".join(str(x) for x in (item.get("app"), item.get("field")) if x)
+                parts.append(f"{where}: {item.get('message')}" if where else str(item.get("message")))
+            if not parts:
+                parts = [str(x) for x in definition_report.get("errors", [])[:5]]
+            error(command, "schema_contract_failed", "; ".join(parts) or "Schema-Contract verletzt.", EXIT_CATALOG_ERROR)
+
+        catalog = load_catalog()
+        apps = catalog.get("apps", [])
+        data = {
+            "schemaContract": definition_report.get("schemaContract"),
+            "schemaVersion": catalog.get("schemaVersion"),
+            "stats": definition_report.get("stats", {}),
+            "generated": {
+                "apps": len(apps),
+                "categories": len(catalog.get("categories", [])),
+                "iconMappings": sum(1 for app in apps if app.get("iconProvider") and app.get("iconId")),
+            },
+            "violations": len(definition_report.get("violations", [])),
+        }
+        if human:
+            stats = data["stats"]
+            generated = data["generated"]
+            print("Caelestia WebApps · Catalog Contract")
+            print(f"Contract: {data['schemaContract']}")
+            print(f"Schema:   v{data['schemaVersion']}")
+            print()
+            print(f"✓ Apps                 {stats.get('apps', 0)}")
+            print(f"✓ Kategorien           {stats.get('categories', 0)}")
+            print(f"✓ Featured             {stats.get('featured', 0)}")
+            print(f"✓ Applet-fähig         {stats.get('appletCapable', 0)}")
+            print(f"✓ Supported            {stats.get('supported', 0)}")
+            print(f"✓ Experimental         {stats.get('experimental', 0)}")
+            print(f"✓ Standardmäßig aktiv  {stats.get('defaultEnabled', 0)}")
+            print(f"✓ Icon-Mappings        {generated.get('iconMappings', 0)}")
+            print(f"✓ Violations           {data['violations']}")
+            print()
+            print("PASS · Catalog schema contract valid")
+            raise SystemExit(EXIT_OK)
+        success(command, data=data)
+
+    if command == "applet-registry":
+        if len(args) != 1:
+            usage(command)
+        load_catalog()  # reads the persisted catalog; refresh is explicit
+        try:
+            registry = json.loads(APPLET_REGISTRY_FILE.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            error(command, "invalid_registry", "Persistierte Applet Registry fehlt oder enthält kein gültiges JSON.", EXIT_CATALOG_ERROR)
+        success(command, data=registry)
+
+    if command == "applet-entry":
+        if len(args) != 2:
+            usage(command)
+        app_id = args[1]
+        entry = dict(applet_runtime_entry(command, app_id))
+        icon = dict(entry.get("icon") or {})
+        icon_name = str(icon.get("name") or app_id)
+        cache_root = Path(os.environ.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))) / "caelestia-webapps/store-icons-v6"
+        icon_path = ""
+        for suffix in (".svg", ".png", ".webp"):
+            candidate = cache_root / f"{icon_name}{suffix}"
+            if candidate.is_file():
+                icon_path = str(candidate)
+                break
+        # The registry is authoritative for identity/metadata. iconPath is only
+        # a presentation-time local resolution of registry.icon.name.
+        entry["icon"] = icon
+        entry["iconPath"] = icon_path
+        entry["enabled"] = applet_enabled(app_id, entry)
+        entry["activationAvailable"] = applet_activation_available(entry)
+        success(command, data={"app": entry})
+
+    if command == "validate-applet-registry":
+        if len(args) != 1:
+            usage(command)
+        catalog = load_catalog()
+        if not APPLET_REGISTRY_FILE.is_file():
+            error(command, "registry_missing", "Persistierte Applet Registry fehlt.", EXIT_CATALOG_ERROR)
+        with tempfile.TemporaryDirectory(prefix="caelestia-webapps-registry-") as td:
+            catalog_path = Path(td) / "catalog.json"
+            catalog_path.write_text(json.dumps(catalog, ensure_ascii=False), encoding="utf-8")
+            checked = run_capture([sys.executable, str(APPLET_REGISTRY_VALIDATOR), str(catalog_path), str(APPLET_REGISTRY_FILE)])
+        if checked.returncode != 0:
+            error(command, "registry_contract_failed", checked.stderr.strip() or "Applet Registry verletzt den Katalog-Contract.", EXIT_CATALOG_ERROR)
+        registry = json.loads(APPLET_REGISTRY_FILE.read_text(encoding="utf-8"))
+        apps = registry.get("apps", [])
+        success(command, data={
+            "schemaVersion": registry.get("schemaVersion"),
+            "catalogSchemaVersion": registry.get("catalogSchemaVersion"),
+            "apps": len(apps),
+            "supported": sum(1 for app in apps if app.get("support") == "supported"),
+            "experimental": sum(1 for app in apps if app.get("support") == "experimental"),
+            "defaultEnabled": sum(1 for app in apps if app.get("defaultEnabled") is True),
+            "consistent": True,
+            "path": str(APPLET_REGISTRY_FILE),
+        })
+
+    if command == "validate-applet-runtime":
+        if len(args) != 1:
+            usage(command)
+        load_catalog()
+        checked = run_capture([
+            sys.executable, str(APPLET_IMPLEMENTATION_VALIDATOR),
+            str(APPLET_REGISTRY_FILE), str(ROOT / "integrations/caelestia/plugin/manifest.json"),
+            str(ROOT / "integrations/caelestia/plugin"),
+        ])
+        try:
+            report = json.loads(checked.stdout)
+        except json.JSONDecodeError:
+            error(command, "runtime_audit_error", checked.stderr.strip() or "Applet Runtime Audit lieferte ungültige Daten.", EXIT_CATALOG_ERROR)
+        if checked.returncode != 0 or report.get("ok") is not True:
+            error(command, "runtime_mapping_failed", "; ".join(report.get("errors", [])) or "Applet Runtime Mapping ist inkonsistent.", EXIT_CATALOG_ERROR)
+        success(command, data=report.get("data", {}))
+
+    if command == "validate-applet-runtime-sources":
+        if len(args) != 1:
+            usage(command)
+        checked = run_capture([sys.executable, str(APPLET_RUNTIME_SOURCE_VALIDATOR), str(ROOT)])
+        try:
+            report = json.loads(checked.stdout)
+        except json.JSONDecodeError:
+            error(command, "runtime_source_audit_error", checked.stderr.strip() or "Applet Runtime Source Audit lieferte ungültige Daten.", EXIT_CATALOG_ERROR)
+        if checked.returncode != 0 or report.get("ok") is not True:
+            error(command, "runtime_source_violation", "; ".join(report.get("errors", [])) or "Applet Runtime verwendet unerlaubte Metadatenquellen.", EXIT_CATALOG_ERROR)
+        success(command, data=report.get("data", {}))
+
+    if command == "refresh":
+        if len(args) != 1:
+            usage(command)
+        with engine_lock("catalog-refresh", exclusive=True):
+            rebuilt = run_capture([str(CATALOG_SCRIPT), "rebuild"])
+        if rebuilt.returncode != 0:
+            error(command, "catalog_error", rebuilt.stderr.strip() or "Katalog und Applet Registry konnten nicht aktualisiert werden.", EXIT_CATALOG_ERROR)
+        catalog = load_catalog()
+        success(
+            command,
+            data={
+                "schemaVersion": catalog.get("schemaVersion"),
+                "appCount": len(catalog.get("apps", [])),
+                "categoryCount": len(catalog.get("categories", [])),
+            },
+        )
+
+    if command == "ownership":
+        if len(args) != 1:
+            usage(command)
+        catalog = load_catalog()
+        success(
+            command,
+            data={
+                "builtInDefinitionRoot": str(APP_DIR),
+                "userDefinitionRoot": str(
+                    Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+                    / "caelestia-webapps/apps"
+                ),
+                "apps": {
+                    str(app.get("id")): app.get("ownership", {})
+                    for app in catalog.get("apps", [])
+                    if isinstance(app, dict) and app.get("id")
+                },
+            },
+        )
+
+    if command == "runtime":
+        if len(args) != 1:
+            usage(command)
+        catalog = load_catalog()
+        transient = hyprland_window_state(catalog)
+        success(
+            command,
+            data={
+                "runtimeAvailable": bool(transient.get("available", False)),
+                "apps": transient.get("apps", {}),
+            },
+        )
+
+    if command == "notification-watch":
+        if len(args) != 1:
+            usage(command)
+        os.execv(sys.executable, [sys.executable, str(NOTIFICATION_WATCH_TOOL)])
+
+    if command == "applet-state":
+        if len(args) not in {1, 2}:
+            usage(command)
+        app_id = args[1] if len(args) == 2 else None
+        success(command, data=applet_activation_payload(app_id))
+
+    if command == "applet-set":
+        if len(args) != 3 or args[2] not in {"on", "off"}:
+            usage(command)
+        app_id = args[1]
+        entry = applet_runtime_entry(command, app_id)
+        if not applet_activation_available(entry):
+            error(command, "applet_not_activatable", f"Applet {app_id} besitzt noch keine unterstützte Runtime-Implementierung.", EXIT_ACTION_FAILED)
+        app = app_from_catalog(command, app_id)
+        if not bool(app.get("installed", False)):
+            error(command, "applet_requires_install", f"{app_id} muss installiert sein, bevor das Applet aktiviert werden kann.", EXIT_NOT_INSTALLED)
+        enabled = args[2] == "on"
+        set_applet_enabled(app_id, enabled)
+        success(command, data={
+            "appId": app_id,
+            "enabled": enabled,
+            "activationAvailable": True,
+            "installed": True,
+        })
+
+    if command == "applet-settings":
+        if len(args) not in {1, 2}:
+            usage(command)
+        app_id = args[1] if len(args) == 2 else None
+        success(command, data=applet_settings_payload(app_id))
+
+    if command == "applet-setting-set":
+        if len(args) != 4 or args[3] not in {"on", "off"}:
+            usage(command)
+        app_id, capability = args[1], args[2]
+        entry = applet_runtime_entry(command, app_id)
+        if not applet_activation_available(entry):
+            error(command, "applet_not_configurable", f"Applet {app_id} besitzt noch keine unterstützte Runtime-Implementierung.", EXIT_ACTION_FAILED)
+        enabled = args[3] == "on"
+        set_applet_capability(app_id, capability, enabled, entry)
+        success(command, data={
+            "appId": app_id,
+            "capability": capability,
+            "enabled": enabled,
+        })
+
+    if command == "pin-state":
+        if len(args) != 2:
+            usage(command)
+        require_known_app(command, args[1])
+        success(command, data={"appId": args[1], "pinned": pin_state(args[1])})
+
+    if command == "pin-set":
+        if len(args) != 3 or args[2] not in {"on", "off"}:
+            usage(command)
+        require_known_app(command, args[1])
+        enabled = args[2] == "on"
+        set_pin_state(args[1], enabled)
+        success(command, data={"appId": args[1], "pinned": enabled})
+
+    if command == "browser-video-state":
+        if len(args) != 2:
+            usage(command)
+        app = applet_runtime_entry(command, args[1])
+        state, diagnostics = _browser_video_state_result(app)
+        success(command, data={
+            "appId": args[1],
+            "available": state is not None,
+            "state": state or {},
+            "diagnostics": diagnostics,
+        })
+
+    if command == "media-control":
+        if len(args) != 3:
+            usage(command)
+        app = applet_runtime_entry(command, args[1])
+        ok, detail = media_control_for_app(app, args[2])
+        if not ok:
+            error(command, detail, "MPRIS-Aktion konnte nicht ausgeführt werden.", EXIT_ACTION_FAILED)
+        success(command, data={"accepted": True, "appId": args[1], "action": args[2], "player": detail})
+
+    if command == "running-feed":
+        if len(args) != 1:
+            usage(command)
+        success(command, data=running_feed_payload())
+
+    if command == "status-feed":
+        ensure_notification_watcher()
+        if len(args) == 1:
+            success(
+                command,
+                data={
+                    "protocolVersion": 1,
+                    "statuses": integration_status_all(),
+                },
+            )
+        if len(args) == 2:
+            app = applet_runtime_entry(command, args[1])
+            success(command, data=integration_status_payload(app))
+        usage(command)
+
+    if command == "user-create":
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            user_definition_action(command, [str(USER_APPS_TOOL), "create", args[1]])
+
+    if command == "user-update":
+        if len(args) != 3:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            user_definition_action(command, [str(USER_APPS_TOOL), "update", args[1], args[2]])
+
+    if command == "user-delete":
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            app_id = args[1]
+            app = app_from_catalog(command, app_id)
+            if app.get("source") != "user":
+                error(command, "not_user_app", "Nur User-Apps können als Definition gelöscht werden.", EXIT_ACTION_FAILED)
+            state = runtime_state(app)
+            if state.get("installed"):
+                error(command, "still_installed", "User-App zuerst deinstallieren, dann Definition löschen.", EXIT_ACTION_FAILED)
+            user_definition_action(command, [str(USER_APPS_TOOL), "delete", app_id])
+
+    if command == "uninstall-close":
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            close_and_uninstall(command, args[1])
+
+    if command in {"status", "launch", "setup", "install", "repair", "uninstall"}:
+        if len(args) != 2:
+            usage(command)
+        app_id = args[1]
+        require_known_app(command, app_id)
+
+        if command == "status":
+            success(command, data=status_payload(app_id))
+        if command == "launch":
+            launch_like(command, app_id, "launcher")
+        if command == "setup":
+            launch_like(command, app_id, "setupLauncher")
+        if command == "install":
+            with engine_lock(command, exclusive=True):
+                delegate_action(command, [str(INSTALL_SCRIPT), app_id], app_id)
+        if command == "repair":
+            with engine_lock(command, exclusive=True):
+                delegate_action(command, [str(REPAIR_SCRIPT), "--app", app_id, "--quiet"], app_id)
+        if command == "uninstall":
+            with engine_lock(command, exclusive=True):
+                delegate_action(command, [str(UNINSTALL_SCRIPT), app_id], app_id)
+
+    usage(command)
+
+
+if __name__ == "__main__":
+    main()

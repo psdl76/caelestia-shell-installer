@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "categories": {
+    "ai": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "AI",
+      "order": 10
+    },
+    "messaging": {
+      "appletVisible": true,
+      "appletShowBadge": true,
+      "appletNotificationPreview": true,
+      "hyprSharedTag": "communication_app_tag",
+      "hyprSharedOwner": "caelestia",
+      "hyprSharedWorkspace": "communication",
+      "label": "Messaging",
+      "order": 20
+    },
+    "google": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Google",
+      "order": 30
+    },
+    "microsoft": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Microsoft",
+      "order": 40
+    },
+    "proton": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Proton",
+      "order": 50
+    },
+    "productivity": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Productivity",
+      "order": 60
+    },
+    "social": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Social",
+      "order": 70
+    },
+    "video": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "streaming_app_tag",
+      "hyprSharedOwner": "caelestia-webapps",
+      "hyprSharedWorkspace": "streaming",
+      "label": "Video",
+      "order": 80,
+      "hyprSharedLocalDecl": "local streaming_app_tag = \"streaming_app\" -- Caelestia WebApps",
+      "hyprSharedRuleMarker": "-- Caelestia WebApps: streaming",
+      "hyprSharedCreateTag": "create_tag(streaming_app_tag, { workspace = \"special:streaming\", opaque = true, idle_inhibit = \"always\" }) -- Caelestia WebApps",
+      "hyprSharedKeybind": "create_bind(\"SUPER + Y\", fn.toggle(\"streaming\")) -- Caelestia WebApps: Streaming"
+    },
+    "music": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "streaming_app_tag",
+      "hyprSharedOwner": "caelestia-webapps",
+      "hyprSharedWorkspace": "streaming",
+      "label": "Music",
+      "order": 90,
+      "hyprSharedLocalDecl": "local streaming_app_tag = \"streaming_app\" -- Caelestia WebApps",
+      "hyprSharedRuleMarker": "-- Caelestia WebApps: streaming",
+      "hyprSharedCreateTag": "create_tag(streaming_app_tag, { workspace = \"special:streaming\", opaque = true, idle_inhibit = \"always\" }) -- Caelestia WebApps",
+      "hyprSharedKeybind": "create_bind(\"SUPER + Y\", fn.toggle(\"streaming\")) -- Caelestia WebApps: Streaming"
+    },
+    "development": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Development",
+      "order": 100
+    },
+    "design": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Design",
+      "order": 110
+    },
+    "cloud": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Cloud",
+      "order": 120
+    },
+    "shopping": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Shopping",
+      "order": 130
+    },
+    "travel": {
+      "appletVisible": false,
+      "appletShowBadge": false,
+      "appletNotificationPreview": false,
+      "hyprSharedTag": "",
+      "hyprSharedOwner": "",
+      "hyprSharedWorkspace": "",
+      "label": "Travel",
+      "order": 140
+    }
+  }
+}

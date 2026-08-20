@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+P="$ROOT/packaging/arch/PKGBUILD.in"
+test -f "$P"
+grep -Fq "pkgname=caelestia-webapps" "$P"
+grep -Fq "depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell')" "$P"
+grep -Fq 'usr/lib/$pkgname' "$P"
+grep -Fq 'usr/bin/caelestia-webapps' "$P"
+grep -Fq 'usr/bin/caelestia-webapps-manager' "$P"
+! grep -Eq '\$HOME|/home/' "$P"
+grep -Fq 'LICENSE-PENDING' "$P"
+grep -Fq "'gtk-update-icon-cache: refresh hicolor icon cache for installed WebApp icons'" "$P"
+! grep -Fq 'github.com/caelestia-dots' "$P"
+echo "PASS: Arch PKGBUILD prototype respects package/user ownership boundary"

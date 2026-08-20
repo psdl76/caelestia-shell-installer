@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Build / packaging
+build/
+dist/
+*.tar
+*.tar.gz
+*.pkg.tar.*
+*.zst
+
+# Runtime / test artifacts
+*.log
+*.qslog
+*.pid
+*.lock
+.tmp/
+tmp/
+.cache/
+
+# Local secrets / environment
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.zed/
+.vscode/
+.idea/
+.DS_Store
+*~
+*.swp
+*.swo
+
+# Git worktrees / local scratch
+.worktrees/
+.local-test/

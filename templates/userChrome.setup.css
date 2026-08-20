@@ -1,0 +1,23 @@
+/*
+ * Caelestia Web App - Firefox Setup Mode
+ *
+ * Keep Firefox's navigation / permission UI visible so first-run prompts
+ * (persistent storage, microphone, camera, notifications, etc.) can be used.
+ * The dedicated web-app profile is still used.
+ */
+
+#PersonalToolbar {
+    visibility: collapse !important;
+}
+
+#sidebar-header {
+    display: none !important;
+}
+
+#navigator-toolbox {
+    border: none !important;
+}
+
+#fullscreen-warning {
+    display: none !important;
+}
