@@ -55,6 +55,7 @@ QtObject {
     // Semantic Manager roles. Each keeps the accepted Phase-10.1 value
     // as a local fallback, but follows Caelestia Material roles when present.
     readonly property color background: colour("background", "#0b1216")
+    readonly property color surface: colour("surface", "#111a20")
     readonly property color surfaceLow: colour("surfaceContainerLowest", "#10191e")
     readonly property color primaryContent: colour("onPrimary", "#102028")
     readonly property color surfaceRaised: colour("surfaceContainerLow", "#151f24")
@@ -62,6 +63,9 @@ QtObject {
     readonly property color sourceSurface: colour("surfaceContainerLow", "#18272e")
     readonly property color rowSurface: colour("surfaceContainerLow", "#19242a")
     readonly property color toolbarSurface: colour("surfaceContainer", "#1a2830")
+    readonly property color navigationSurface: colour("surfaceContainerLow", "#18242b")
+    readonly property color navigationItem: colour("surfaceContainerHigh", "#202e36")
+    readonly property color mainSurface: colour("surface", "#111a20")
     readonly property color categoryActive: colour("secondaryContainer", "#1e2b31")
     readonly property color controlSurface: colour("surfaceContainerHigh", "#202b31")
     readonly property color sourceHover: colour("surfaceContainerHigh", "#21343d")

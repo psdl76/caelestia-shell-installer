@@ -4,3 +4,7 @@ singleton Tokens 1.0 Tokens.qml
 ActionButton 1.0 ActionButton.qml
 IconButton 1.0 IconButton.qml
 SearchField 1.0 SearchField.qml
+StateLayer 1.0 StateLayer.qml
+NavigationItem 1.0 NavigationItem.qml
+SpatialAnimation 1.0 SpatialAnimation.qml
+EffectAnimation 1.0 EffectAnimation.qml

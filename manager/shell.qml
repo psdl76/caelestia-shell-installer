@@ -94,6 +94,8 @@ ShellRoot {
     }
 
     function categoryLabel(id) {
+        if (id === "featured")
+            return "Featured"
         if (id === "all")
             return "Alle"
         if (id === "installed")
@@ -103,6 +105,74 @@ ShellRoot {
                 return categories[i].label
         }
         return id
+    }
+
+    function categoryDescription(id) {
+        const descriptions = ({
+            "featured": "Empfohlene WebApps",
+            "all": "Vollständiger Katalog",
+            "installed": "Lokal eingerichtete WebApps",
+            "ai": "Assistenten und KI-Werkzeuge",
+            "messaging": "Chats und Kommunikation",
+            "google": "Google Dienste",
+            "microsoft": "Microsoft Dienste",
+            "proton": "Proton Dienste",
+            "productivity": "Arbeit und Organisation",
+            "social": "Soziale Netzwerke",
+            "video": "Video und Streaming",
+            "music": "Musik und Audio",
+            "development": "Entwicklung und Code",
+            "design": "Design und Kreativität",
+            "cloud": "Cloud und Dateien",
+            "shopping": "Shopping und Handel",
+            "travel": "Reisen und Mobilität"
+        })
+        return descriptions[id] || "WebApps in dieser Kategorie"
+    }
+
+    function categoryIcon(id) {
+        const icons = ({
+            "featured": "\ue838",
+            "all": "\ue5c3",
+            "installed": "\ue2c4",
+            "ai": "\uf1d0",
+            "messaging": "\ue0b7",
+            "google": "\ue8b6",
+            "microsoft": "\ue5c3",
+            "proton": "\ue8e8",
+            "productivity": "\ue8f9",
+            "social": "\ue7fb",
+            "video": "\ue04b",
+            "music": "\ue405",
+            "development": "\ue86f",
+            "design": "\ue40a",
+            "cloud": "\ue2bd",
+            "shopping": "\ue8cc",
+            "travel": "\ue53d"
+        })
+        return icons[id] || "\ue5c3"
+    }
+
+    function categoryCount(id) {
+        if (id === "installed")
+            return apps.filter(function(app) { return app.installed }).length
+        if (id === "featured")
+            return apps.filter(function(app) { return app.featured === true }).length
+        if (id === "all")
+            return apps.length
+        const category = categories.find(function(item) { return item.id === id })
+        return category ? category.count : 0
+    }
+
+    function selectCategory(id, direction) {
+        if (root.selectedCategory === id)
+            return
+        contentSwitch.complete()
+        contentPane.opacity = 0
+        contentTranslate.y = (direction || 1) * Style.Tokens.space2xl
+        root.selectedCategory = id
+        scroll.contentY = 0
+        contentSwitch.restart()
     }
 
     function visibleApps() {
@@ -944,10 +1014,10 @@ ShellRoot {
         id: window
         visible: root.startupReady
         title: "Caelestia WebApps"
-        implicitWidth: 920
-        implicitHeight: 680
-        minimumSize.width: 760
-        minimumSize.height: 500
+        implicitWidth: 1180
+        implicitHeight: 760
+        minimumSize.width: 920
+        minimumSize.height: 600
         color: Style.Theme.background
 
         onVisibleChanged: {
@@ -991,419 +1061,400 @@ ShellRoot {
 
         Rectangle {
             anchors.fill: parent
-            color: Style.Theme.background
+            color: Style.Theme.navigationSurface
 
-            ColumnLayout {
+            RowLayout {
                 anchors.fill: parent
-                anchors.margins: 22
-                spacing: Style.Tokens.space2xl
+                anchors.margins: 12
+                spacing: 12
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.Tokens.spaceXl
+                Rectangle {
+                    Layout.preferredWidth: Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                    Layout.fillHeight: true
+                    radius: Style.Tokens.radiusMainSurface
+                    color: Style.Theme.navigationSurface
 
                     ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 180
-                        spacing: Style.Tokens.spaceXxs
+                        anchors.fill: parent
+                        anchors.margins: 14
+                        spacing: Style.Tokens.space2xl
 
-                        Text {
-                            text: "WebApps"
-                            color: Style.Theme.textPrimaryAlt
-                            font.pixelSize: Style.Tokens.fontDisplay
-                            font.weight: Font.DemiBold
-                        }
-
-                        Text {
-                            text: root.actionStatusText.length > 0
-                                ? root.actionStatusText
-                                : (root.catalogReady
-                                    ? root.statusText + " · Catalog v" + root.catalogData.schemaVersion + " · " + root.runtimeStatusText
-                                    : root.statusText)
-                            color: (root.catalogError || root.actionError) ? Style.Theme.error
-                                : (root.actionBusy ? Style.Theme.accentText : Style.Theme.statusIdle)
-                            font.pixelSize: Style.Tokens.fontBody
-                            elide: Text.ElideRight
+                        Style.SearchField {
+                            id: managerSearch
                             Layout.fillWidth: true
+                            text: root.searchQuery
+                            placeholderText: "WebApps durchsuchen…"
+                            onChanged: function(value) { root.searchQuery = value }
                         }
-                    }
 
-                    Rectangle {
-                        visible: root.actionBusy
-                        implicitWidth: busyText.implicitWidth + 24
-                        implicitHeight: Style.Tokens.controlHeightCompact
-                        radius: Style.Tokens.radiusControl
-                        color: Style.Theme.toolbarSurface
-                        border.width: 1
-                        border.color: Style.Theme.toolbarBorder
+                        Flickable {
+                            id: navigationScroll
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            clip: true
+                            contentHeight: navigationColumn.implicitHeight
+                            boundsBehavior: Flickable.StopAtBounds
 
-                        Text {
-                            id: busyText
-                            anchors.centerIn: parent
-                            text: "●  " + root.commandLabel(root.actionCommand)
-                            color: Style.Theme.accentText
-                            font.pixelSize: Style.Tokens.fontBodySmall
-                            font.weight: Font.DemiBold
-                        }
-                    }
+                            ColumnLayout {
+                                id: navigationColumn
+                                width: navigationScroll.width
+                                spacing: Style.Tokens.spaceXs
 
-                    Style.IconButton {
-                        icon: "\ue40a"
-                        active: Style.Theme.caelestiaThemeAvailable
-                        tooltip: Style.Theme.caelestiaThemeAvailable
-                            ? "Caelestia Theme aktiv" + (Style.Theme.caelestiaMode.length > 0 ? " (" + Style.Theme.caelestiaMode + ")" : "")
-                            : "Manager-Fallback-Theme aktiv"
-                        interactive: false
-                    }
+                                Repeater {
+                                    model: [
+                                        { id: "featured", label: "Featured" },
+                                        { id: "all", label: "Alle WebApps" },
+                                        { id: "installed", label: "Installiert" }
+                                    ]
 
-                    Style.ActionButton {
-                        minimumWidth: 126
-                        primary: true
-                        icon: "\ue145"
-                        label: "WebApp"
-                        interactive: !root.actionBusy
-                        onClicked: root.openCreateWizard()
-                    }
-
-                    Style.SearchField {
-                        id: managerSearch
-                        Layout.preferredWidth: 270
-                        Layout.minimumWidth: 190
-                        text: root.searchQuery
-                        placeholderText: "WebApps durchsuchen…"
-                        onChanged: function(value) { root.searchQuery = value }
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.Tokens.spaceMd
-
-                    Flickable {
-                        id: categoryFlick
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: Style.Tokens.controlHeightComfortable
-                        clip: true
-                        contentWidth: categoryRow.implicitWidth
-                        contentHeight: height
-                        boundsBehavior: Flickable.StopAtBounds
-                        flickableDirection: Flickable.HorizontalFlick
-
-                        Row {
-                            id: categoryRow
-                            height: parent.height
-                            spacing: Style.Tokens.spaceSm
-
-                            Repeater {
-                                model: [{ id: "featured", label: "Featured" }, { id: "all", label: "Alle" }].concat(root.categories)
-
-                                delegate: Rectangle {
-                                    required property var modelData
-                                    readonly property bool active: root.selectedCategory === modelData.id
-                                    implicitWidth: categoryText.implicitWidth + 28
-                                    implicitHeight: Style.Tokens.controlHeightComfortable
-                                    radius: active ? 18 : Style.Tokens.radiusControl
-                                    color: active ? Style.Theme.categoryActive : (categoryHover.hovered ? Style.Theme.surfaceRaised : "transparent")
-                                    border.width: activeFocus ? Style.Tokens.focusRingWidth : (active ? 1 : 0)
-                                    border.color: activeFocus ? Style.Theme.focusStrong : Style.Theme.categoryBorder
-                                    scale: categoryPointer.pressed ? Style.Tokens.pressedScale : 1.0
-                                    activeFocusOnTab: true
-
-                                    Keys.onReturnPressed: root.selectedCategory = modelData.id
-                                    Keys.onEnterPressed: root.selectedCategory = modelData.id
-                                    Keys.onSpacePressed: root.selectedCategory = modelData.id
-
-                                    Behavior on radius { NumberAnimation { duration: Style.Tokens.motionDialog; easing.type: Easing.OutCubic } }
-                                    Behavior on scale { NumberAnimation { duration: Style.Tokens.motionPress; easing.type: Easing.OutCubic } }
-
-                                    HoverHandler { id: categoryHover }
-
-                                    Text {
-                                        id: categoryText
-                                        anchors.centerIn: parent
-                                        text: modelData.label
-                                        color: parent.active ? Style.Theme.accentText : Style.Theme.categoryText
-                                        font.pixelSize: Style.Tokens.fontBody
-                                        font.weight: parent.active ? Font.DemiBold : Font.Normal
+                                    delegate: Style.NavigationItem {
+                                        required property var modelData
+                                        required property int index
+                                        Layout.fillWidth: true
+                                        label: modelData.label
+                                        description: root.categoryCount(modelData.id) + " · " + root.categoryDescription(modelData.id)
+                                        icon: root.categoryIcon(modelData.id)
+                                        selected: root.selectedCategory === modelData.id
+                                        firstInGroup: index === 0
+                                        lastInGroup: index === 2
+                                        onClicked: root.selectCategory(modelData.id, 1)
                                     }
+                                }
 
-                                    MouseArea {
-                                        id: categoryPointer
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.selectedCategory = modelData.id
+                                Item { Layout.preferredHeight: Style.Tokens.spaceMd }
+
+                                Repeater {
+                                    model: root.categories
+
+                                    delegate: Style.NavigationItem {
+                                        required property var modelData
+                                        required property int index
+                                        Layout.fillWidth: true
+                                        label: modelData.label
+                                        description: modelData.count + " · " + root.categoryDescription(modelData.id)
+                                        icon: root.categoryIcon(modelData.id)
+                                        selected: root.selectedCategory === modelData.id
+                                        firstInGroup: index === 0
+                                        lastInGroup: index === root.categories.length - 1
+                                        onClicked: root.selectCategory(modelData.id, 1)
                                     }
                                 }
                             }
                         }
 
-                        WheelHandler {
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                            onWheel: function(event) {
-                                const delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x
-                                categoryFlick.contentX = Math.max(0, Math.min(
-                                    categoryFlick.contentWidth - categoryFlick.width,
-                                    categoryFlick.contentX - delta
-                                ))
-                                event.accepted = true
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Style.Tokens.spaceMd
+
+                            Style.IconButton {
+                                icon: "\ue40a"
+                                active: Style.Theme.caelestiaThemeAvailable
+                                tooltip: Style.Theme.caelestiaThemeAvailable
+                                    ? "Caelestia Theme aktiv" + (Style.Theme.caelestiaMode.length > 0 ? " (" + Style.Theme.caelestiaMode + ")" : "")
+                                    : "Manager-Fallback-Theme aktiv"
+                                interactive: false
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 0
+                                Text { text: "Caelestia WebApps"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBody; font.weight: Font.DemiBold }
+                                Text { text: root.runtimeStatusText; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontLabel }
                             }
                         }
-                    }
-
-                    Rectangle {
-                        id: installedFilter
-                        readonly property bool active: root.selectedCategory === "installed"
-                        readonly property int installedCount: root.apps.filter(function(a) { return a.installed }).length
-                        implicitWidth: installedFilterText.implicitWidth + 24
-                        implicitHeight: Style.Tokens.controlHeightComfortable
-                        radius: active ? 18 : Style.Tokens.radiusControl
-                        color: active ? Style.Theme.categoryActive : (installedHover.hovered ? Style.Theme.surfaceRaised : "transparent")
-                        border.width: activeFocus ? Style.Tokens.focusRingWidth : (active ? 1 : 0)
-                        border.color: activeFocus ? Style.Theme.focusStrong : Style.Theme.categoryBorder
-                        scale: installedPointer.pressed ? Style.Tokens.pressedScale : 1.0
-                        activeFocusOnTab: true
-
-                        Keys.onReturnPressed: root.selectedCategory = "installed"
-                        Keys.onEnterPressed: root.selectedCategory = "installed"
-                        Keys.onSpacePressed: root.selectedCategory = "installed"
-
-                        Behavior on radius { NumberAnimation { duration: Style.Tokens.motionDialog; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: Style.Tokens.motionPress; easing.type: Easing.OutCubic } }
-
-                        HoverHandler { id: installedHover }
-
-                        Text {
-                            id: installedFilterText
-                            anchors.centerIn: parent
-                            text: installedFilter.installedCount + " installiert"
-                            color: installedFilter.active ? Style.Theme.accentText : Style.Theme.textMuted
-                            font.pixelSize: Style.Tokens.fontBody
-                            font.weight: installedFilter.active ? Font.DemiBold : Font.Normal
-                        }
-
-                        MouseArea {
-                            id: installedPointer
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.selectedCategory = "installed"
-                        }
-
-                        ToolTip.visible: installedHover.hovered
-                        ToolTip.text: "Nur installierte WebApps anzeigen"
                     }
                 }
 
                 Rectangle {
                     Layout.fillWidth: true
-                    implicitHeight: 1
-                    color: Style.Theme.divider
-                }
-
-                Flickable {
-                    id: scroll
-                    Layout.fillWidth: true
                     Layout.fillHeight: true
+                    radius: Style.Tokens.radiusMainSurface
+                    color: Style.Theme.mainSurface
                     clip: true
-                    contentHeight: listColumn.implicitHeight
-                    boundsBehavior: Flickable.StopAtBounds
 
                     ColumnLayout {
-                        id: listColumn
-                        width: scroll.width
-                        spacing: Style.Tokens.spaceXs
+                        anchors.fill: parent
+                        anchors.margins: 26
+                        spacing: Style.Tokens.space2xl
 
-                        Repeater {
-                            model: root.visibleApps()
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Style.Tokens.spaceXl
 
-                            delegate: Rectangle {
-                                required property var modelData
+                            ColumnLayout {
                                 Layout.fillWidth: true
-                                implicitHeight: Style.Tokens.appRowHeight
-                                radius: rowHover.hovered ? 24 : 18
-                                color: rowHover.hovered ? Style.Theme.surfaceRaised : "transparent"
+                                spacing: Style.Tokens.spaceXxs
 
-                                // Do not animate the outer hover fill. A fade-out of the old
-                                // delegate plus fade-in of the new one makes two neighbouring
-                                // rows appear highlighted at once, especially in light themes.
-                                // Radius motion remains for the Caelestia morphing feel.
-                                Behavior on radius { NumberAnimation { duration: Style.Tokens.motionEmphasized; easing.type: Easing.OutCubic } }
+                                Text {
+                                    text: root.categoryLabel(root.selectedCategory)
+                                    color: Style.Theme.textPrimaryAlt
+                                    font.pixelSize: Style.Tokens.fontDisplay
+                                    font.weight: Font.DemiBold
+                                }
 
-                                HoverHandler { id: rowHover }
+                                Text {
+                                    text: root.actionStatusText.length > 0
+                                        ? root.actionStatusText
+                                        : root.categoryCount(root.selectedCategory) + " WebApps · " + root.categoryDescription(root.selectedCategory)
+                                    color: (root.catalogError || root.actionError) ? Style.Theme.error
+                                        : (root.actionBusy ? Style.Theme.accentText : Style.Theme.statusIdle)
+                                    font.pixelSize: Style.Tokens.fontBody
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+                            }
 
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 10
-                                    anchors.rightMargin: 8
-                                    spacing: Style.Tokens.spaceLg
+                            Rectangle {
+                                visible: root.actionBusy
+                                implicitWidth: busyText.implicitWidth + 24
+                                implicitHeight: Style.Tokens.controlHeightCompact
+                                radius: Style.Tokens.radiusControl
+                                color: Style.Theme.toolbarSurface
 
-                                    Rectangle {
-                                        implicitWidth: Style.Tokens.appIconSurface
-                                        implicitHeight: Style.Tokens.appIconSurface
-                                        radius: Style.Tokens.radiusXl
-                                        color: rowHover.hovered ? Style.Theme.rowHover : Style.Theme.rowSurface
+                                Text {
+                                    id: busyText
+                                    anchors.centerIn: parent
+                                    text: "●  " + root.commandLabel(root.actionCommand)
+                                    color: Style.Theme.accentText
+                                    font.pixelSize: Style.Tokens.fontBodySmall
+                                    font.weight: Font.DemiBold
+                                }
+                            }
 
-                                        Image {
-                                            anchors.centerIn: parent
-                                            width: Style.Tokens.appIconSize
-                                            height: Style.Tokens.appIconSize
-                                            source: root.iconSource(modelData)
-                                            fillMode: Image.PreserveAspectFit
-                                            asynchronous: true
+                            Style.ActionButton {
+                                minimumWidth: 126
+                                primary: true
+                                icon: "\ue145"
+                                label: "WebApp"
+                                interactive: !root.actionBusy
+                                onClicked: root.openCreateWizard()
+                            }
+
+                            Style.IconButton {
+                                icon: "\ue5cd"
+                                tooltip: "Manager schließen"
+                                onClicked: Qt.quit()
+                            }
+                        }
+
+                        Item {
+                            id: contentPane
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+
+                            transform: Translate { id: contentTranslate }
+
+                            Flickable {
+                                id: scroll
+                                anchors.fill: parent
+                                clip: true
+                                contentHeight: listColumn.implicitHeight
+                                boundsBehavior: Flickable.StopAtBounds
+
+                                ColumnLayout {
+                                    id: listColumn
+                                    width: scroll.width
+                                    spacing: Style.Tokens.spaceXs
+
+                                    Repeater {
+                                        model: root.visibleApps()
+
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            Layout.fillWidth: true
+                                            implicitHeight: Style.Tokens.appRowHeight
+                                            radius: rowHover.hovered ? Style.Tokens.radiusDialog : Style.Tokens.radiusLg
+                                            color: rowHover.hovered ? Style.Theme.controlHover : Style.Theme.navigationItem
+
+                                            // Do not animate the outer hover fill. A fade-out of the old
+                                            // delegate plus fade-in of the new one makes two neighbouring
+                                            // rows appear highlighted at once, especially in light themes.
+                                            // Radius motion remains for the Caelestia morphing feel.
+                                            Behavior on radius { Style.EffectAnimation {} }
+
+                                            HoverHandler { id: rowHover }
+
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                anchors.leftMargin: 12
+                                                anchors.rightMargin: 10
+                                                spacing: Style.Tokens.spaceLg
+
+                                                Rectangle {
+                                                    implicitWidth: Style.Tokens.appIconSurface
+                                                    implicitHeight: Style.Tokens.appIconSurface
+                                                    radius: width / 2
+                                                    color: rowHover.hovered ? Style.Theme.rowHover : Style.Theme.rowSurface
+
+                                                    Image {
+                                                        anchors.centerIn: parent
+                                                        width: Style.Tokens.appIconSize
+                                                        height: Style.Tokens.appIconSize
+                                                        source: root.iconSource(modelData)
+                                                        fillMode: Image.PreserveAspectFit
+                                                        asynchronous: true
+                                                    }
+                                                }
+
+                                                ColumnLayout {
+                                                    Layout.fillWidth: true
+                                                    Layout.minimumWidth: 110
+                                                    spacing: Style.Tokens.spaceXxs
+
+                                                    Text {
+                                                        id: appNameText
+                                                        text: modelData.name
+                                                        color: Style.Theme.textPrimary
+                                                        font.pixelSize: Style.Tokens.fontSubtitle
+                                                        font.weight: Font.DemiBold
+                                                        elide: Text.ElideRight
+                                                        Layout.fillWidth: true
+
+                                                        HoverHandler { id: appNameHover }
+                                                        ToolTip.visible: appNameHover.hovered && appNameText.truncated
+                                                        ToolTip.text: modelData.name
+                                                    }
+
+                                                    Rectangle {
+                                                        implicitWidth: Style.Tokens.sourceIconSize
+                                                        implicitHeight: Style.Tokens.sourceIconSize
+                                                        radius: Style.Tokens.radiusSource
+                                                        color: sourceTypeHover.hovered ? Style.Theme.sourceHover : Style.Theme.sourceSurface
+                                                        border.width: 1
+                                                        border.color: modelData.source === "user" ? Style.Theme.userSourceBorder : Style.Theme.catalogSourceBorder
+
+                                                        HoverHandler { id: sourceTypeHover }
+
+                                                        Text {
+                                                            anchors.centerIn: parent
+                                                            text: modelData.source === "user" ? "\ue7fd" : "\ue865"
+                                                            color: modelData.source === "user" ? Style.Theme.userSource : Style.Theme.textSecondary
+                                                            font.family: "Material Symbols Rounded"
+                                                            font.pixelSize: Style.Tokens.fontBodyLarge
+                                                            font.weight: Font.Medium
+                                                        }
+
+                                                        ToolTip.visible: sourceTypeHover.hovered
+                                                        ToolTip.text: modelData.source === "user" ? "Eigene App" : "Katalog-App"
+                                                    }
+
+                                                    Text {
+                                                        text: modelData.comment || modelData.genericName
+                                                        color: Style.Theme.textTertiary
+                                                        font.pixelSize: Style.Tokens.fontBodySmall
+                                                        elide: Text.ElideRight
+                                                        Layout.fillWidth: true
+                                                    }
+                                                }
+
+                                                Rectangle {
+                                                    visible: modelData.installed && root.appRunning(modelData.id)
+                                                    implicitWidth: 9
+                                                    implicitHeight: 9
+                                                    radius: Style.Tokens.radiusStatusDot
+                                                    color: Style.Theme.running
+                                                    border.width: 1
+                                                    border.color: Style.Theme.runningBorder
+                                                }
+
+                                                RowLayout {
+                                                    visible: modelData.installed
+                                                    spacing: Style.Tokens.spaceXs
+
+                                                    Style.ActionButton {
+                                                        minimumWidth: root.appRunning(modelData.id) ? 108 : 86
+                                                        primary: true
+                                                        icon: root.appRunning(modelData.id) ? "\ue8a0" : "\ue89e"
+                                                        label: root.appRunning(modelData.id) ? "Fokussieren" : "Öffnen"
+                                                        interactive: !root.actionBusy
+                                                        onClicked: root.runAction("launch", modelData)
+                                                    }
+                                                    Style.ActionButton {
+                                                        visible: modelData.applet?.available === true && modelData.applet?.support === "supported"
+                                                        minimumWidth: 82
+                                                        label: root.appletEnabled(modelData.id) ? "Applet an" : "Applet aus"
+                                                        tooltip: root.appletEnabled(modelData.id) ? "Applet in der Caelestia-Bar deaktivieren" : "Applet in der Caelestia-Bar aktivieren"
+                                                        interactive: !root.actionBusy && root.appletStateAvailable
+                                                        onClicked: root.toggleApplet(modelData)
+                                                    }
+                                                    Style.IconButton {
+                                                        icon: "⋯"
+                                                        tooltip: "Weitere Aktionen"
+                                                        interactive: !root.actionBusy
+                                                        onClicked: root.openActionMenu(modelData)
+                                                    }
+                                                }
+                                                Style.IconButton {
+                                                    visible: !modelData.installed && modelData.source === "user"
+                                                    icon: "⋯"
+                                                    tooltip: "Weitere Aktionen"
+                                                    interactive: !root.actionBusy
+                                                    onClicked: root.openActionMenu(modelData)
+                                                }
+                                                Style.ActionButton {
+                                                    visible: !modelData.installed
+                                                    minimumWidth: 108
+                                                    primary: true
+                                                    icon: "\ue2c4"
+                                                    label: root.actionBusy && root.actionAppId === modelData.id ? "Bitte warten…" : "Installieren"
+                                                    interactive: !root.actionBusy
+                                                    onClicked: root.runAction("install", modelData)
+                                                }
+                                            }
                                         }
                                     }
 
-                                    ColumnLayout {
+                                    Rectangle {
+                                        visible: root.catalogReady && root.visibleApps().length === 0
                                         Layout.fillWidth: true
-                                        Layout.minimumWidth: 110
-                                        spacing: Style.Tokens.spaceXxs
+                                        implicitHeight: Style.Tokens.emptyStateHeight
+                                        color: "transparent"
 
-                                        Text {
-                                            id: appNameText
-                                            text: modelData.name
-                                            color: Style.Theme.textPrimary
-                                            font.pixelSize: Style.Tokens.fontSubtitle
-                                            font.weight: Font.DemiBold
-                                            elide: Text.ElideRight
-                                            Layout.fillWidth: true
-
-                                            HoverHandler { id: appNameHover }
-                                            ToolTip.visible: appNameHover.hovered && appNameText.truncated
-                                            ToolTip.text: modelData.name
-                                        }
-
-                                        Rectangle {
-                                            implicitWidth: Style.Tokens.sourceIconSize
-                                            implicitHeight: Style.Tokens.sourceIconSize
-                                            radius: Style.Tokens.radiusSource
-                                            color: sourceTypeHover.hovered ? Style.Theme.sourceHover : Style.Theme.sourceSurface
-                                            border.width: 1
-                                            border.color: modelData.source === "user" ? Style.Theme.userSourceBorder : Style.Theme.catalogSourceBorder
-
-                                            HoverHandler { id: sourceTypeHover }
+                                        Column {
+                                            anchors.centerIn: parent
+                                            spacing: Style.Tokens.spaceMd
 
                                             Text {
-                                                anchors.centerIn: parent
-                                                text: modelData.source === "user" ? "\ue7fd" : "\ue865"
-                                                color: modelData.source === "user" ? Style.Theme.userSource : Style.Theme.textSecondary
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: root.searchQuery.length > 0 ? "\ue8b6" : "\ue5d5"
+                                                color: Style.Theme.textDisabled
                                                 font.family: "Material Symbols Rounded"
+                                                font.pixelSize: 30
+                                            }
+
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: root.searchQuery.length > 0
+                                                    ? "Keine passenden WebApps"
+                                                    : (root.selectedCategory === "installed"
+                                                        ? "Keine WebApps installiert"
+                                                        : "In dieser Kategorie gibt es keine WebApps")
+                                                color: Style.Theme.textMuted
                                                 font.pixelSize: Style.Tokens.fontBodyLarge
                                                 font.weight: Font.Medium
                                             }
 
-                                            ToolTip.visible: sourceTypeHover.hovered
-                                            ToolTip.text: modelData.source === "user"
-                                                ? "Eigene App"
-                                                : "Katalog-App"
+                                            Text {
+                                                anchors.horizontalCenter: parent.horizontalCenter
+                                                text: root.searchQuery.length > 0
+                                                    ? "Suche anpassen oder mit Esc leeren"
+                                                    : (root.selectedCategory === "installed"
+                                                        ? "Installiere eine WebApp aus dem Katalog"
+                                                        : "Wähle eine andere Kategorie oder lege eine eigene WebApp an")
+                                                color: Style.Theme.textSubtle
+                                                font.pixelSize: Style.Tokens.fontBodySmall
+                                            }
                                         }
-
-                                        Text {
-                                            text: modelData.comment || modelData.genericName
-                                            color: Style.Theme.textTertiary
-                                            font.pixelSize: Style.Tokens.fontBodySmall
-                                            elide: Text.ElideRight
-                                            Layout.fillWidth: true
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        visible: modelData.installed && root.appRunning(modelData.id)
-                                        implicitWidth: 9
-                                        implicitHeight: 9
-                                        radius: Style.Tokens.radiusStatusDot
-                                        color: Style.Theme.running
-                                        border.width: 1
-                                        border.color: Style.Theme.runningBorder
-                                    }
-
-                                    RowLayout {
-                                        visible: modelData.installed
-                                        spacing: Style.Tokens.spaceXs
-
-                                        Style.ActionButton {
-                                            minimumWidth: root.appRunning(modelData.id) ? 108 : 86
-                                            primary: true
-                                            icon: root.appRunning(modelData.id) ? "\ue8a0" : "\ue89e"
-                                            label: root.appRunning(modelData.id) ? "Fokussieren" : "Öffnen"
-                                            interactive: !root.actionBusy
-                                            onClicked: root.runAction("launch", modelData)
-                                        }
-                                        Style.ActionButton {
-                                            visible: modelData.applet?.available === true && modelData.applet?.support === "supported"
-                                            minimumWidth: 82
-                                            label: root.appletEnabled(modelData.id) ? "Applet an" : "Applet aus"
-                                            tooltip: root.appletEnabled(modelData.id) ? "Applet in der Caelestia-Bar deaktivieren" : "Applet in der Caelestia-Bar aktivieren"
-                                            interactive: !root.actionBusy && root.appletStateAvailable
-                                            onClicked: root.toggleApplet(modelData)
-                                        }
-                                        Style.IconButton {
-                                            icon: "⋯"
-                                            tooltip: "Weitere Aktionen"
-                                            interactive: !root.actionBusy
-                                            onClicked: root.openActionMenu(modelData)
-                                        }
-                                    }
-                                    Style.IconButton {
-                                        visible: !modelData.installed && modelData.source === "user"
-                                        icon: "⋯"
-                                        tooltip: "Weitere Aktionen"
-                                        interactive: !root.actionBusy
-                                        onClicked: root.openActionMenu(modelData)
-                                    }
-                                    Style.ActionButton {
-                                        visible: !modelData.installed
-                                        minimumWidth: 108
-                                        primary: true
-                                        icon: "\ue2c4"
-                                        label: root.actionBusy && root.actionAppId === modelData.id ? "Bitte warten…" : "Installieren"
-                                        interactive: !root.actionBusy
-                                        onClicked: root.runAction("install", modelData)
                                     }
                                 }
                             }
                         }
+                    }
 
-                        Rectangle {
-                            visible: root.catalogReady && root.visibleApps().length === 0
-                            Layout.fillWidth: true
-                            implicitHeight: Style.Tokens.emptyStateHeight
-                            color: "transparent"
-
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: Style.Tokens.spaceMd
-
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: root.searchQuery.length > 0 ? "\ue8b6" : "\ue5d5"
-                                    color: Style.Theme.textDisabled
-                                    font.family: "Material Symbols Rounded"
-                                    font.pixelSize: 30
-                                }
-
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: root.searchQuery.length > 0
-                                        ? "Keine passenden WebApps"
-                                        : (root.selectedCategory === "installed"
-                                            ? "Keine WebApps installiert"
-                                            : "In dieser Kategorie gibt es keine WebApps")
-                                    color: Style.Theme.textMuted
-                                    font.pixelSize: Style.Tokens.fontBodyLarge
-                                    font.weight: Font.Medium
-                                }
-
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: root.searchQuery.length > 0
-                                        ? "Suche anpassen oder mit Esc leeren"
-                                        : (root.selectedCategory === "installed"
-                                            ? "Installiere eine WebApp aus dem Katalog"
-                                            : "Wähle eine andere Kategorie oder lege eine eigene WebApp an")
-                                    color: Style.Theme.textSubtle
-                                    font.pixelSize: Style.Tokens.fontBodySmall
-                                }
-                            }
-                        }
+                    ParallelAnimation {
+                        id: contentSwitch
+                        Style.EffectAnimation { target: contentPane; property: "opacity"; from: 0; to: 1 }
+                        Style.SpatialAnimation { target: contentTranslate; property: "y"; to: 0 }
                     }
                 }
             }

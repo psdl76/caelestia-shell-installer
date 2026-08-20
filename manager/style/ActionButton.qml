@@ -16,23 +16,23 @@ Rectangle {
     implicitWidth: Math.max(minimumWidth, content.implicitWidth + 24)
     implicitHeight: Tokens.controlHeight
     activeFocusOnTab: root.interactive
-    radius: Tokens.radiusControl
+    radius: state.pressed ? Tokens.radiusMd : height / 2
     opacity: root.interactive ? 1.0 : 0.45
-    scale: pointer.pressed && root.interactive ? Tokens.pressedScale : 1.0
+    scale: state.pressed && root.interactive ? Tokens.pressedScale : 1.0
     color: {
-        if (root.danger) return hover.hovered && root.interactive ? Theme.dangerActionHover : Theme.dangerAction
-        if (root.primary) return hover.hovered && root.interactive ? Theme.primaryHover : Theme.primary
-        return hover.hovered && root.interactive ? Theme.controlHover : Theme.controlSurface
+        if (root.danger) return state.hovered && root.interactive ? Theme.dangerActionHover : Theme.dangerAction
+        if (root.primary) return state.hovered && root.interactive ? Theme.primaryHover : Theme.primary
+        return state.hovered && root.interactive ? Theme.controlHover : Theme.controlSurface
     }
     border.width: root.activeFocus ? Tokens.focusRingWidth : (root.primary || root.danger ? 0 : 1)
     border.color: root.activeFocus ? Theme.focusStrong : Theme.fieldBorder
     Behavior on scale { NumberAnimation { duration: Tokens.motionPress; easing.type: Easing.OutCubic } }
+    Behavior on radius { EffectAnimation {} }
 
     Keys.onReturnPressed: if (root.interactive) root.clicked()
     Keys.onEnterPressed: if (root.interactive) root.clicked()
     Keys.onSpacePressed: if (root.interactive) root.clicked()
 
-    HoverHandler { id: hover }
     RowLayout {
         id: content
         anchors.centerIn: parent
@@ -53,13 +53,12 @@ Rectangle {
             font.weight: root.primary || root.danger ? Font.DemiBold : Font.Medium
         }
     }
-    MouseArea {
-        id: pointer
-        anchors.fill: parent
-        enabled: root.interactive
-        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+    StateLayer {
+        id: state
+        disabled: !root.interactive
+        color: root.danger ? Theme.dangerActionText : (root.primary ? Theme.primaryContent : Theme.controlText)
         onClicked: root.clicked()
     }
-    ToolTip.visible: hover.hovered && root.tooltip.length > 0
+    ToolTip.visible: state.hovered && root.tooltip.length > 0
     ToolTip.text: root.tooltip
 }

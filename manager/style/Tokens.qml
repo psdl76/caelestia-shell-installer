@@ -27,6 +27,9 @@ QtObject {
     readonly property int radiusLg: 16
     readonly property int radiusXl: 17
     readonly property int radiusDialog: 24
+    readonly property int radiusConnectedOuter: 28
+    readonly property int radiusConnectedInner: 5
+    readonly property int radiusMainSurface: 30
 
     // Typography
     readonly property int fontLabel: 11
@@ -51,6 +54,10 @@ QtObject {
     readonly property int fieldHeight: 38
     readonly property int switchHeight: 26
     readonly property int sourceIconSize: 22
+    readonly property int navigationWidth: 380
+    readonly property int navigationItemHeight: 64
+    readonly property int navigationItemActiveHeight: 74
+    readonly property int navigationIconSize: 42
 
     // Motion
     readonly property int motionPress: 90
@@ -59,6 +66,9 @@ QtObject {
     readonly property int motionStandard: 160
     readonly property int motionEmphasized: 210
     readonly property int motionDialog: 220
+    readonly property int motionFastSpatial: 260
+    readonly property int motionDefaultSpatial: 420
+    readonly property int motionSlowEffects: 300
     readonly property real pressedScale: 0.96
     readonly property int focusRingWidth: 2
     readonly property int emptyStateHeight: 160
