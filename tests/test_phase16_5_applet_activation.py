@@ -20,8 +20,12 @@ assert 'visible: root.appletEnabled && root.appRunning' in plugin
 assert 'if (activationProcess.running)' in plugin
 manager = MANAGER.read_text(encoding='utf-8')
 assert '"applet-set"' in manager
-assert 'modelData.applet?.support === "supported"' in manager
-assert 'root.appletEnabled(modelData.id) ? "Applet an" : "Applet aus"' in manager
+# Phase 17.5 moved the activation control from catalog rows to WebApp-Info.
+# The frozen Phase-16 bridge still has to gate on supported metadata and bind
+# the persisted state of the selected app.
+assert 'app.applet?.support === "supported"' in manager
+assert 'checked: root.actionMenuApp ? root.appletEnabled(root.actionMenuApp.id) : false' in manager
+assert 'root.toggleApplet(app)' in manager
 
 # Execute the state helpers in isolation to verify persistence/default semantics.
 names = {

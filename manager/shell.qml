@@ -1409,6 +1409,13 @@ ShellRoot {
                                             topRightRadius: topLeftRadius
                                             bottomLeftRadius: index === root.visibleApps().length - 1 ? Style.Tokens.radiusConnectedOuter : Style.Tokens.radiusConnectedInner
                                             bottomRightRadius: bottomLeftRadius
+                                            border.width: activeFocus ? Style.Tokens.focusRingWidth : 0
+                                            border.color: Style.Theme.focusStrong
+                                            activeFocusOnTab: !root.actionBusy
+
+                                            Keys.onReturnPressed: root.openActionMenu(modelData)
+                                            Keys.onEnterPressed: root.openActionMenu(modelData)
+                                            Keys.onSpacePressed: root.openActionMenu(modelData)
 
                                             RowLayout {
                                                 anchors.fill: parent
