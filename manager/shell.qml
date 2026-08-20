@@ -31,6 +31,9 @@ ShellRoot {
     property string displayedMainPage: "catalog"
     property string pendingMainPage: "catalog"
     property int mainPageDirection: 1
+    property var outgoingMainPageItem: null
+    property var incomingMainPageItem: null
+    property var incomingMainPageTranslate: null
     property string pendingCategory: "featured"
     property int categoryDirection: 1
     property var actionMenuApp: null
@@ -212,7 +215,11 @@ ShellRoot {
     function navigateMainPage(page, direction) {
         if (root.mainPage === page)
             return
-        mainPageSwitch.complete()
+        if (mainPageSwitch.running)
+            mainPageSwitch.complete()
+        root.outgoingMainPageItem = root.pageItem(root.displayedMainPage)
+        root.incomingMainPageItem = root.pageItem(page)
+        root.incomingMainPageTranslate = root.pageTranslate(page)
         root.mainPage = page
         root.pendingMainPage = page
         root.mainPageDirection = direction || 1
@@ -1273,7 +1280,7 @@ ShellRoot {
                     color: Style.Theme.mainSurface
                     clip: true
                     opacity: 1
-                    enabled: root.displayedMainPage === "catalog"
+                    enabled: root.displayedMainPage === "catalog" && opacity > 0.01
 
                     transform: Translate { id: catalogPageTranslate }
 
@@ -1597,12 +1604,12 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "wizard"
+                enabled: root.displayedMainPage === "wizard" && opacity > 0.01
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
                 clip: true
-                z: enabled ? 60 : -1
+                z: root.displayedMainPage === "wizard" ? 60 : -1
 
                 transform: Translate {
                     id: wizardPageTranslate
@@ -1889,12 +1896,12 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "actions"
+                enabled: root.displayedMainPage === "actions" && opacity > 0.01
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
                 clip: true
-                z: enabled ? 54 : -1
+                z: root.displayedMainPage === "actions" ? 54 : -1
 
                 transform: Translate {
                     id: actionPageTranslate
@@ -2007,12 +2014,12 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "applet-settings"
+                enabled: root.displayedMainPage === "applet-settings" && opacity > 0.01
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
                 clip: true
-                z: enabled ? 55 : -1
+                z: root.displayedMainPage === "applet-settings" ? 55 : -1
 
                 transform: Translate {
                     id: appletSettingsPageTranslate
@@ -2164,7 +2171,7 @@ ShellRoot {
                 id: mainPageSwitch
 
                 Style.EffectAnimation {
-                    target: root.pageItem(root.displayedMainPage)
+                    target: root.outgoingMainPageItem
                     property: "opacity"
                     to: 0
                     duration: Style.Tokens.motionQuick
@@ -2172,24 +2179,22 @@ ShellRoot {
 
                 ScriptAction {
                     script: {
-                        const incomingPage = root.pageItem(root.pendingMainPage)
-                        const incomingTranslate = root.pageTranslate(root.pendingMainPage)
-                        incomingPage.opacity = 0
-                        incomingTranslate.x = root.mainPageDirection * Style.Tokens.space2xl * 3
+                        root.incomingMainPageItem.opacity = 0
+                        root.incomingMainPageTranslate.x = root.mainPageDirection * Style.Tokens.space2xl * 3
                         root.displayedMainPage = root.pendingMainPage
                     }
                 }
 
                 ParallelAnimation {
                     Style.EffectAnimation {
-                        target: root.pageItem(root.displayedMainPage)
+                        target: root.incomingMainPageItem
                         property: "opacity"
                         from: 0
                         to: 1
                         duration: Style.Tokens.motionSlowEffects
                     }
                     Style.SpatialAnimation {
-                        target: root.pageTranslate(root.displayedMainPage)
+                        target: root.incomingMainPageTranslate
                         property: "x"
                         to: 0
                         duration: Style.Tokens.motionSlowEffects

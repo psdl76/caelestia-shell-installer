@@ -13,7 +13,7 @@ assert 'root.navigateMainPage("wizard", 1)' in SHELL
 assert 'root.navigateMainPage("applet-settings", 1)' in SHELL
 
 for page in ("wizard", "actions", "applet-settings"):
-    assert f'enabled: root.displayedMainPage === "{page}"' in SHELL
+    assert f'enabled: root.displayedMainPage === "{page}" && opacity > 0.01' in SHELL
 
 assert "id: mainPageSwitch" in SHELL
 assert "SequentialAnimation {" in SHELL

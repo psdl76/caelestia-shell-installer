@@ -10,6 +10,9 @@ DOC = ROOT / "docs/phases/phase-17/PHASE17_3_NEXUS_MOTION_GROUPING.md"
 # The route shown on screen changes only after the outgoing page faded out.
 assert 'property string displayedMainPage: "catalog"' in SHELL
 assert "function navigateMainPage(page, direction)" in SHELL
+assert "if (mainPageSwitch.running)" in SHELL
+assert "root.outgoingMainPageItem = root.pageItem(root.displayedMainPage)" in SHELL
+assert "root.incomingMainPageItem = root.pageItem(page)" in SHELL
 main_switch = SHELL[SHELL.index("id: mainPageSwitch"):]
 fade_out = main_switch.index('property: "opacity"')
 route_swap = main_switch.index("root.displayedMainPage = root.pendingMainPage")
@@ -17,6 +20,11 @@ fade_in = main_switch.index('from: 0', route_swap)
 spatial_in = main_switch.index('property: "x"', route_swap)
 assert fade_out < route_swap < fade_in < spatial_in
 assert "root.mainPageDirection * Style.Tokens.space2xl * 3" in main_switch
+assert "target: root.outgoingMainPageItem" in main_switch
+assert "target: root.incomingMainPageItem" in main_switch
+assert "target: root.incomingMainPageTranslate" in main_switch
+assert "target: root.pageItem(root.displayedMainPage)" not in main_switch
+assert SHELL.count("&& opacity > 0.01") == 4
 
 # Category changes follow the same Nexus Pages sequence.
 content_switch = SHELL[SHELL.index("id: contentSwitch"):SHELL.index("Style.WindowCloseDock")]

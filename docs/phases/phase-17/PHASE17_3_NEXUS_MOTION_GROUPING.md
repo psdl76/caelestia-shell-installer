@@ -32,6 +32,11 @@ does not add a private Caelestia QML dependency.
   exchange the category, then fade in with vertical movement.
 - Independent page-level opacity and position `Behavior`s are forbidden because
   they produce the overlapping cross-fade seen in the review video.
+- Every transition captures fixed outgoing and incoming objects before it
+  starts. Changing the displayed route must not retarget a running animation or
+  leave an invisible page enabled above the Manager controls.
+- A page at zero opacity is never input-enabled, providing a fail-safe against
+  invisible surfaces intercepting clicks.
 
 ## Grouping contract
 
