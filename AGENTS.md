@@ -26,6 +26,7 @@ The baseline represented by this workspace is:
 - Phase 16.7 — repair/upgrade/migration: LIVE ACCEPTED / FROZEN
 - Phase 16.8 — end-to-end closing gate: ACCEPTED / FROZEN
 - Phase 17.1 — Manager Caelestia Nexus layout: IMPLEMENTATION CANDIDATE / WIP
+- Phase 17.2 — embedded animated Manager detail pages: IMPLEMENTATION CANDIDATE / WIP
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -168,4 +169,4 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phase 16.8 End-to-End is accepted and frozen.** The active goal is Phase 17.1 Manager visual alignment. Preserve the proven packaged lifecycle and keep private Caelestia QML dependencies out of the standalone Manager.
+**Phase 16.8 End-to-End is accepted and frozen.** The active goal is Phase 17 Manager visual alignment, currently Phase 17.2 embedded detail-page navigation. Preserve the proven packaged lifecycle and keep private Caelestia QML dependencies out of the standalone Manager.

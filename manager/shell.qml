@@ -27,6 +27,7 @@ ShellRoot {
     property bool appletStateAvailable: false
     property bool appletSettingsOpen: false
     property bool actionMenuOpen: false
+    property string mainPage: "catalog"
     property var actionMenuApp: null
     property var appletSettingsApp: null
     property var appletSettingsItems: []
@@ -165,6 +166,12 @@ ShellRoot {
     }
 
     function selectCategory(id, direction) {
+        if (root.mainPage !== "catalog") {
+            root.mainPage = "catalog"
+            root.actionMenuOpen = false
+            root.wizardOpen = false
+            root.appletSettingsOpen = false
+        }
         if (root.selectedCategory === id)
             return
         contentSwitch.complete()
@@ -353,11 +360,12 @@ ShellRoot {
             return
         root.actionMenuApp = app
         root.actionMenuOpen = true
+        root.mainPage = "actions"
     }
 
     function closeActionMenu() {
         root.actionMenuOpen = false
-        root.actionMenuApp = null
+        root.mainPage = "catalog"
     }
 
     function openAppletSettings(app) {
@@ -365,6 +373,7 @@ ShellRoot {
         root.appletSettingsItems = []
         root.appletSettingsError = ""
         root.appletSettingsOpen = true
+        root.mainPage = "applet-settings"
         root.appletSettingsBusy = true
         appletSettingsProcess.command = [root.projectRoot + "/bin/caelestia-webapps", "applet-settings", app.id]
         appletSettingsProcess.running = true
@@ -374,9 +383,11 @@ ShellRoot {
         if (root.appletSettingsBusy)
             return
         root.appletSettingsOpen = false
-        root.appletSettingsApp = null
         root.appletSettingsItems = []
         root.appletSettingsError = ""
+        root.actionMenuApp = root.appletSettingsApp
+        root.actionMenuOpen = root.actionMenuApp !== null
+        root.mainPage = root.actionMenuOpen ? "actions" : "catalog"
     }
 
     function consumeAppletSettings(text) {
@@ -455,6 +466,7 @@ ShellRoot {
         root.wizardAutoIconId = ""
         root.wizardError = ""
         root.wizardOpen = true
+        root.mainPage = "wizard"
         wizardFocusTimer.restart()
     }
 
@@ -473,6 +485,7 @@ ShellRoot {
         root.wizardAutoIconId = app.id
         root.wizardError = ""
         root.wizardOpen = true
+        root.mainPage = "wizard"
         wizardFocusTimer.restart()
     }
 
@@ -481,6 +494,12 @@ ShellRoot {
             return
         root.wizardOpen = false
         root.wizardError = ""
+        if (root.wizardEditing && root.actionMenuApp) {
+            root.actionMenuOpen = true
+            root.mainPage = "actions"
+        } else {
+            root.mainPage = "catalog"
+        }
     }
 
     function submitWizard() {
@@ -613,6 +632,8 @@ ShellRoot {
                 if (expected === "user-create" || expected === "user-update") {
                     root.wizardOpen = false
                     root.wizardError = ""
+                    root.actionMenuOpen = false
+                    root.mainPage = "catalog"
                 }
 
                 if ((expected === "uninstall" || expected === "uninstall-close")
@@ -1460,10 +1481,23 @@ ShellRoot {
             }
 
             Rectangle {
-                anchors.fill: parent
-                visible: root.wizardOpen
-                color: Style.Theme.scrim
-                z: 60
+                x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                y: 12
+                width: parent.width - x - 12
+                height: parent.height - 24
+                visible: true
+                enabled: root.mainPage === "wizard"
+                opacity: enabled ? 1 : 0
+                radius: Style.Tokens.radiusMainSurface
+                color: Style.Theme.mainSurface
+                clip: true
+                z: enabled ? 60 : -1
+
+                Behavior on opacity { Style.EffectAnimation {} }
+                transform: Translate {
+                    x: root.mainPage === "wizard" ? 0 : Style.Tokens.space2xl
+                    Behavior on x { Style.SpatialAnimation {} }
+                }
 
                 MouseArea {
                     anchors.fill: parent
@@ -1471,13 +1505,9 @@ ShellRoot {
                 }
 
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width - 70, 570)
-                    implicitHeight: wizardColumn.implicitHeight + 44
-                    radius: Style.Tokens.radiusDialog
-                    color: Style.Theme.surfaceAlt
-                    border.width: 1
-                    border.color: Style.Theme.dialogBorder
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    color: "transparent"
 
                     MouseArea {
                         anchors.fill: parent
@@ -1489,14 +1519,33 @@ ShellRoot {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        anchors.margins: 22
+                        anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
-                        Text {
-                            text: root.wizardEditing ? "WebApp bearbeiten" : "WebApp hinzufügen"
-                            color: Style.Theme.textPrimary
-                            font.pixelSize: Style.Tokens.fontTitleLarge
-                            font.weight: Font.DemiBold
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Style.Tokens.spaceLg
+
+                            Style.IconButton {
+                                icon: "\ue5c4"
+                                tooltip: "Zurück"
+                                interactive: !root.actionBusy
+                                onClicked: root.closeWizard()
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: root.wizardEditing ? "WebApp bearbeiten" : "WebApp hinzufügen"
+                                color: Style.Theme.textPrimary
+                                font.pixelSize: Style.Tokens.fontTitleLarge
+                                font.weight: Font.DemiBold
+                            }
+
+                            Style.IconButton {
+                                icon: "\ue5cd"
+                                tooltip: "Manager schließen"
+                                onClicked: Qt.quit()
+                            }
                         }
 
                         Text {
@@ -1589,7 +1638,8 @@ ShellRoot {
                         }
 
                         Text { text: "Kategorie"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
-                        RowLayout {
+                        Flow {
+                            Layout.fillWidth: true
                             spacing: Style.Tokens.spaceSm
                             Repeater {
                                 model: root.categories
@@ -1617,7 +1667,8 @@ ShellRoot {
 
                         Text { text: "Icon"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
 
-                        RowLayout {
+                        Flow {
+                            Layout.fillWidth: true
                             spacing: Style.Tokens.spaceSm
                             Repeater {
                                 model: [{ id: "auto", label: "Automatisch" }, { id: "url", label: "URL" }, { id: "local", label: "Lokale Datei" }]
@@ -1728,10 +1779,23 @@ ShellRoot {
             }
 
             Rectangle {
-                anchors.fill: parent
-                visible: root.actionMenuOpen
-                color: Style.Theme.scrimSoft
-                z: 54
+                x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                y: 12
+                width: parent.width - x - 12
+                height: parent.height - 24
+                visible: true
+                enabled: root.mainPage === "actions"
+                opacity: enabled ? 1 : 0
+                radius: Style.Tokens.radiusMainSurface
+                color: Style.Theme.mainSurface
+                clip: true
+                z: enabled ? 54 : -1
+
+                Behavior on opacity { Style.EffectAnimation {} }
+                transform: Translate {
+                    x: root.mainPage === "actions" ? 0 : Style.Tokens.space2xl
+                    Behavior on x { Style.SpatialAnimation {} }
+                }
 
                 MouseArea {
                     anchors.fill: parent
@@ -1739,13 +1803,9 @@ ShellRoot {
                 }
 
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width - 80, 580)
-                    implicitHeight: actionMenuColumn.implicitHeight + 42
-                    radius: Style.Tokens.radiusDialog
-                    color: Style.Theme.surfaceAlt
-                    border.width: 1
-                    border.color: Style.Theme.dialogBorder
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    color: "transparent"
 
                     MouseArea {
                         anchors.fill: parent
@@ -1757,28 +1817,46 @@ ShellRoot {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        anchors.margins: 21
+                        anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
-                        ColumnLayout {
+                        RowLayout {
                             Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceXxs
+                            spacing: Style.Tokens.spaceLg
 
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.actionMenuApp ? root.actionMenuApp.name : "WebApp"
-                                color: Style.Theme.textPrimary
-                                font.pixelSize: Style.Tokens.fontTitle
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
+                            Style.IconButton {
+                                icon: "\ue5c4"
+                                tooltip: "Zurück"
+                                interactive: !root.actionBusy
+                                onClicked: root.closeActionMenu()
                             }
 
-                            Text {
+                            ColumnLayout {
                                 Layout.fillWidth: true
-                                text: "Weitere Aktionen und Einstellungen für diese WebApp."
-                                wrapMode: Text.WordWrap
-                                color: Style.Theme.labelMuted
-                                font.pixelSize: Style.Tokens.fontBodySmall
+                                spacing: Style.Tokens.spaceXxs
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: root.actionMenuApp ? root.actionMenuApp.name : "WebApp"
+                                    color: Style.Theme.textPrimary
+                                    font.pixelSize: Style.Tokens.fontTitle
+                                    font.weight: Font.DemiBold
+                                    elide: Text.ElideRight
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: "Weitere Aktionen und Einstellungen für diese WebApp."
+                                    wrapMode: Text.WordWrap
+                                    color: Style.Theme.labelMuted
+                                    font.pixelSize: Style.Tokens.fontBodySmall
+                                }
+                            }
+
+                            Style.IconButton {
+                                icon: "\ue5cd"
+                                tooltip: "Manager schließen"
+                                onClicked: Qt.quit()
                             }
                         }
 
@@ -1930,24 +2008,28 @@ ShellRoot {
                             }
                         }
 
-                        RowLayout {
-                            Layout.alignment: Qt.AlignRight
-                            Style.ActionButton {
-                                minimumWidth: 96
-                                label: "Schließen"
-                                interactive: !root.actionBusy
-                                onClicked: root.closeActionMenu()
-                            }
-                        }
                     }
                 }
             }
 
             Rectangle {
-                anchors.fill: parent
-                visible: root.appletSettingsOpen
-                color: Style.Theme.scrimSoft
-                z: 55
+                x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                y: 12
+                width: parent.width - x - 12
+                height: parent.height - 24
+                visible: true
+                enabled: root.mainPage === "applet-settings"
+                opacity: enabled ? 1 : 0
+                radius: Style.Tokens.radiusMainSurface
+                color: Style.Theme.mainSurface
+                clip: true
+                z: enabled ? 55 : -1
+
+                Behavior on opacity { Style.EffectAnimation {} }
+                transform: Translate {
+                    x: root.mainPage === "applet-settings" ? 0 : Style.Tokens.space2xl
+                    Behavior on x { Style.SpatialAnimation {} }
+                }
 
                 MouseArea {
                     anchors.fill: parent
@@ -1955,13 +2037,9 @@ ShellRoot {
                 }
 
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width - 80, 540)
-                    implicitHeight: settingsColumn.implicitHeight + 42
-                    radius: Style.Tokens.radiusDialog
-                    color: Style.Theme.surfaceAlt
-                    border.width: 1
-                    border.color: Style.Theme.dialogBorder
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    color: "transparent"
 
                     MouseArea {
                         anchors.fill: parent
@@ -1973,16 +2051,34 @@ ShellRoot {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        anchors.margins: 21
+                        anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
-                        Text {
+                        RowLayout {
                             Layout.fillWidth: true
-                            text: !root.appletSettingsApp ? "Applet-Einstellungen" : root.appletSettingsApp.name + " · Applet"
-                            color: Style.Theme.textPrimary
-                            font.pixelSize: Style.Tokens.fontTitle
-                            font.weight: Font.DemiBold
-                            elide: Text.ElideRight
+                            spacing: Style.Tokens.spaceLg
+
+                            Style.IconButton {
+                                icon: "\ue5c4"
+                                tooltip: "Zurück"
+                                interactive: !root.appletSettingsBusy
+                                onClicked: root.closeAppletSettings()
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: !root.appletSettingsApp ? "Applet-Einstellungen" : root.appletSettingsApp.name + " · Applet"
+                                color: Style.Theme.textPrimary
+                                font.pixelSize: Style.Tokens.fontTitle
+                                font.weight: Font.DemiBold
+                                elide: Text.ElideRight
+                            }
+
+                            Style.IconButton {
+                                icon: "\ue5cd"
+                                tooltip: "Manager schließen"
+                                onClicked: Qt.quit()
+                            }
                         }
 
                         Text {
@@ -2076,15 +2172,6 @@ ShellRoot {
                             font.pixelSize: Style.Tokens.fontBodySmall
                         }
 
-                        RowLayout {
-                            Layout.alignment: Qt.AlignRight
-                            Style.ActionButton {
-                                minimumWidth: 96
-                                label: "Schließen"
-                                interactive: !root.appletSettingsBusy
-                                onClicked: root.closeAppletSettings()
-                            }
-                        }
                     }
                 }
             }
