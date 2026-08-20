@@ -12,7 +12,7 @@ assert VERSION == "0.4.1"
 assert README.startswith("# Caelestia WebApps 0.4.1\n")
 assert "CAELESTIA_WEBAPPS_LANGUAGE=de" in README
 assert "CAELESTIA_WEBAPPS_LANGUAGE=en" in README
-assert "LOCAL RELEASE CANDIDATE — VERIFIED / REMOTE PENDING" in RELEASE
+assert "PUBLIC RELEASE — VERIFIED" in RELEASE
 assert "Real rootless Core 0.4.1 install and uninstall: passed" in RELEASE
 assert "Real temporary WebApp create/install/status/uninstall/delete: passed" in RELEASE
 assert "Status: **ACCEPTED / FROZEN**" in PHASE
@@ -38,7 +38,7 @@ for name in ("make-runtime-tarball.sh", "build-arch-package.sh"):
 assert 'VERSION="${1:-$(<"$ROOT/VERSION")}"' in (ROOT / "packaging/make-runtime-tarball.sh").read_text(encoding="utf-8")
 assert 'VERSION="$(<"$ROOT/VERSION")"' in (ROOT / "packaging/build-arch-package.sh").read_text(encoding="utf-8")
 assert "pkgver=0.4.1" in PKGBUILD
-assert 'url=""' in PKGBUILD
+assert 'url="https://github.com/psdl76/caelestia-shell-installer"' in PKGBUILD
 assert "OWNER" not in PKGBUILD
 assert "license=('GPL-3.0-only')" in PKGBUILD
 assert 'usr/share/licenses/$pkgname/LICENSE' in PKGBUILD

@@ -1,6 +1,6 @@
 # Caelestia WebApps 0.4.1
 
-Status: **LOCAL RELEASE CANDIDATE — VERIFIED / REMOTE PENDING**
+Status: **PUBLIC RELEASE — VERIFIED**
 Date: **2026-08-20**
 
 ## Changes since 0.4.0
@@ -29,11 +29,11 @@ Date: **2026-08-20**
 - The previous Core version, persistent state and all six existing WebApps were
   restored and verified after the test; no temporary artifacts remained.
 
-## Publication boundary
+## Publication
 
-The project is licensed under GPL-3.0-only. No Git remote is configured yet;
-the canonical repository URL must be written into the package metadata before
-public upload.
+The project is licensed under GPL-3.0-only. Its canonical public repository and
+Arch package URL are
+`https://github.com/psdl76/caelestia-shell-installer`.
 
 The real-home test is intentionally manual and requires an explicit safety
 argument:

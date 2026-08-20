@@ -78,8 +78,9 @@ bash tests/run_release_0_4_1_gate.sh
 ## Packaging and licensing
 
 The project and packaged source are licensed under GPL-3.0-only. The desktop
-entry intentionally uses the generic `applications-internet` icon. The package
-URL will be set to the canonical GitHub repository before publication.
+entry intentionally uses the generic `applications-internet` icon. The
+canonical repository is
+[psdl76/caelestia-shell-installer](https://github.com/psdl76/caelestia-shell-installer).
 
 See `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`,
 `docs/phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md` and
