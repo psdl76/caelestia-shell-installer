@@ -1,11 +1,12 @@
-# Caelestia WebApps 0.4.0
+# Caelestia WebApps 0.4.1
 
 Caelestia WebApps is a standalone manager for Firefox-based WebApps on
 Hyprland, visually aligned with the Caelestia Shell Nexus settings UI.
 
-Release 0.4.0 is the accepted Phase 16.8 lifecycle and Phase 17.7 Manager
-baseline. It is currently a local/private release: a public repository URL and
-redistribution license have not yet been selected.
+Release candidate 0.4.1 adds accepted German/English localization to the Phase
+16.8 lifecycle and Phase 17.7 Manager baseline. It remains local/private until
+the real install/uninstall check passes and a repository URL and redistribution
+license have been selected.
 
 ## Features
 
@@ -17,6 +18,8 @@ redistribution license have not yet been selected.
 - WebApp detail pages, add/edit wizard, confirmation flows and About page;
 - keyboard navigation, live runtime state and Caelestia-derived public palette
   bridge without private Caelestia QML imports.
+- automatic German/English Manager localization with an explicit language
+  override.
 
 ## Requirements
 
@@ -34,6 +37,14 @@ redistribution license have not yet been selected.
 
 The Manager performs its preflight, refreshes Catalog v2 through
 `bin/caelestia-webapps` and then opens the standalone Quickshell window.
+
+German is selected for `de` locales; all other locales use English. To override
+the detected locale for one launch:
+
+```bash
+CAELESTIA_WEBAPPS_LANGUAGE=de ./manager.sh
+CAELESTIA_WEBAPPS_LANGUAGE=en ./manager.sh
+```
 
 ## Architecture
 
@@ -57,10 +68,10 @@ It includes the Phase 17 Manager suite, the 22-test Phase 16.8 lifecycle gate,
 shell syntax validation and the 17-test packaging/product gate. Destructive
 lifecycle tests run in disposable HOME/XDG environments.
 
-The local 0.4.0 release gate, including artifact builds, is:
+The local 0.4.1 release-candidate gate, including artifact builds, is:
 
 ```bash
-bash tests/run_release_0_4_0_gate.sh
+bash tests/run_release_0_4_1_gate.sh
 ```
 
 ## Packaging and licensing
@@ -70,5 +81,5 @@ The desktop entry intentionally uses the generic `applications-internet` icon.
 Before public redistribution, replace the placeholder package URL and select an
 explicit project license; see `packaging/LICENSE-PENDING.txt`.
 
-See `docs/phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md` and
-`docs/releases/RELEASE_0.4.0.md` for the accepted baseline and release notes.
+See `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md` and
+`docs/releases/RELEASE_0.4.1.md` for the accepted baseline and candidate notes.

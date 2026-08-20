@@ -24,9 +24,9 @@ for filename, typename in components.items():
 # All embedded subpages share one header component.
 # Phase 17.6 adds the top-level About header to the three workflow headers.
 assert SHELL.count("Style.PageHeader {") == 4
-assert 'title: "WebApp-Info"' in SHELL
+assert 'title: Style.I18n.choose("WebApp-Info", "WebApp info")' in SHELL
 assert "id: actionDetailsColumn" in SHELL
-assert 'subtitle: "Verfügbare Funktionen des Caelestia-Applets"' in SHELL
+assert 'subtitle: Style.I18n.choose("Verfügbare Funktionen des Caelestia-Applets", "Available capabilities of the Caelestia applet")' in SHELL
 
 wizard = SHELL[SHELL.index("id: wizardPage"):SHELL.index("id: actionPage")]
 assert wizard.count("Style.SectionHeader {") >= 3
@@ -34,11 +34,11 @@ assert wizard.count("Style.SettingsTextField {") == 4
 assert wizard.count("Style.SettingsSelect {") == 2
 assert "Flow {" not in wizard
 assert 'text: "WebApp"' in wizard
-assert 'text: "Darstellung"' in wizard
-assert 'text: "Vorschau"' in wizard
+assert 'text: Style.I18n.choose("Darstellung", "Appearance")' in wizard
+assert 'text: Style.I18n.choose("Vorschau", "Preview")' in wizard
 
 applet = SHELL[SHELL.index("id: appletSettingsPage"):SHELL.index("id: mainPageSwitch")]
-assert 'text: "Funktionen"' in applet
+assert 'text: Style.I18n.choose("Funktionen", "Capabilities")' in applet
 assert "delegate: Style.SettingsToggle {" in applet
 assert "firstInGroup: index === 0" in applet
 assert "lastInGroup: index === root.appletSettingsItems.length - 1" in applet
@@ -46,7 +46,7 @@ assert "lastInGroup: index === root.appletSettingsItems.length - 1" in applet
 # The modal remains modal, but does not invent a second switch design.
 confirmation = SHELL[SHELL.index("visible: root.pendingUninstallApp !== null"):]
 assert "Style.SettingsToggle {" in confirmation
-assert 'title: "Aus dem Katalog entfernen"' in confirmation
+assert 'title: Style.I18n.choose("Aus dem Katalog entfernen", "Remove from catalog")' in confirmation
 
 toggle = (STYLE / "SettingsToggle.qml").read_text(encoding="utf-8")
 field = (STYLE / "SettingsTextField.qml").read_text(encoding="utf-8")

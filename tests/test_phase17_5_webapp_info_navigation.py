@@ -18,13 +18,18 @@ assert 'label: "Installieren"' not in catalog
 assert 'label: "Aktionen"' not in catalog
 
 detail = SHELL[SHELL.index("id: actionPage"):SHELL.index("id: appletSettingsPage")]
-assert 'title: "WebApp-Info"' in detail
+assert 'title: Style.I18n.choose("WebApp-Info", "WebApp info")' in detail
 assert "id: actionDetailsColumn" in detail
 assert "root.iconSource(root.actionMenuApp)" in detail
-assert "root.actionMenuApp.comment || root.actionMenuApp.genericName" in detail
+assert "Style.I18n.appDescription(root.actionMenuApp)" in detail
 assert "Style.SettingsToggle {" in detail
 assert detail.count("Style.SettingsInfoRow {") == 4
-for section in ('group: "WebApp"', 'group: "Applet"', 'group: "Verwaltung"', 'group: "Entfernen"'):
+for section in (
+    'group: "WebApp"',
+    'group: "Applet"',
+    'group: Style.I18n.choose("Verwaltung", "Management")',
+    'group: Style.I18n.choose("Entfernen", "Remove")',
+):
     assert section in SHELL
 
 for action in ("launch", "install", "applet-toggle", "applet-settings", "setup", "repair", "edit", "remove"):

@@ -8,8 +8,8 @@ API="$ROOT/bin/caelestia-webapps"
 # Material destructive icon now lives as a reusable IconButton property.
 grep -Fq '"\ue872"' "$QML"
 grep -Fq 'font.family: "Material Symbols Rounded"' "$ICON"
-grep -Fq 'title: "Aus dem Katalog entfernen"' "$QML"
-grep -Fq '? "Schließen & deinstallieren"' "$QML"
+grep -Fq 'title: Style.I18n.choose("Aus dem Katalog entfernen", "Remove from catalog")' "$QML"
+grep -Fq 'Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall")' "$QML"
 grep -Fq 'root.runAction(root.appRunning(app.id) ? "uninstall-close" : "uninstall", app)' "$QML"
 
 # Wizard keyboard flow remains intact; Escape is now also globally hardened.

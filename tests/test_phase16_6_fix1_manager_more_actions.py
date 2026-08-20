@@ -8,7 +8,7 @@ assert 'property bool actionMenuOpen: false' in qml
 assert 'property var actionMenuApp: null' in qml
 assert 'function openActionMenu(app)' in qml
 assert 'function closeActionMenu()' in qml
-assert 'title: "WebApp-Info"' in qml
+assert 'title: Style.I18n.choose("WebApp-Info", "WebApp info")' in qml
 assert 'onClicked: root.openActionMenu(modelData)' in qml
 assert 'text: "\\ue5cc"' in qml
 assert "ToolTip" not in qml

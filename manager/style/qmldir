@@ -1,5 +1,6 @@
 module CaelestiaWebApps.Style
 singleton Theme 1.0 Theme.qml
+singleton I18n 1.0 I18n.qml
 singleton Tokens 1.0 Tokens.qml
 ActionButton 1.0 ActionButton.qml
 IconButton 1.0 IconButton.qml

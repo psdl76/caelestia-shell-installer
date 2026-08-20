@@ -5,7 +5,7 @@ import QtQuick.Controls
 Rectangle {
     id: root
     property alias text: field.text
-    property string placeholderText: "Suchen…"
+    property string placeholderText: I18n.choose("Suchen…", "Search…")
     signal changed(string value)
 
     function forceSearchFocus() {

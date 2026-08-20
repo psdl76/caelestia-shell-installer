@@ -17,12 +17,12 @@ ShellRoot {
     property var categories: []
     property string selectedCategory: "featured"
     property string searchQuery: ""
-    property string statusText: "Catalog wird geladen…"
+    property string statusText: Style.I18n.choose("Katalog wird geladen…", "Loading catalog…")
     property bool catalogReady: false
     property bool catalogError: false
     property var runtimeByApp: ({})
     property bool runtimeStateAvailable: false
-    property string runtimeStatusText: "Runtime wird geprüft…"
+    property string runtimeStatusText: Style.I18n.choose("Runtime wird geprüft…", "Checking runtime…")
     property var appletEnabledByApp: ({})
     property bool appletStateAvailable: false
     property bool appletSettingsOpen: false
@@ -64,7 +64,7 @@ ShellRoot {
     property string wizardError: ""
     property string startupStage: "boot"
     property string startupLabel: "Caelestia WebApps"
-    property string startupDetail: "Manager wird vorbereitet"
+    property string startupDetail: Style.I18n.choose("Manager wird vorbereitet", "Preparing Manager")
     property real startupProgress: 0.02
     property bool startupReady: false
     property bool startupError: false
@@ -89,8 +89,8 @@ ShellRoot {
         try {
             const event = JSON.parse(value)
             root.startupStage = event.stage || root.startupStage
-            root.startupLabel = event.label || root.startupLabel
-            root.startupDetail = event.detail || root.startupDetail
+            root.startupLabel = (Style.I18n.isGerman ? event.label : event.labelEn) || event.label || root.startupLabel
+            root.startupDetail = (Style.I18n.isGerman ? event.detail : event.detailEn) || event.detail || root.startupDetail
             if (typeof event.progress === "number")
                 root.startupProgress = Math.max(root.startupProgress, Math.min(1.0, event.progress))
             if (event.state === "error")
@@ -98,8 +98,8 @@ ShellRoot {
             if (event.stage === "ready") {
                 root.startupPreflightDone = true
                 root.startupStage = "catalog-load"
-                root.startupLabel = "WebApp Katalog"
-                root.startupDetail = "Katalogdaten werden geladen"
+                root.startupLabel = Style.I18n.choose("WebApp-Katalog", "WebApp catalog")
+                root.startupDetail = Style.I18n.choose("Katalogdaten werden geladen", "Loading catalog data")
                 root.startupProgress = Math.max(root.startupProgress, 0.97)
                 root.refreshCatalog()
             }
@@ -113,12 +113,27 @@ ShellRoot {
     }
 
     function categoryLabel(id) {
-        if (id === "featured")
-            return "Featured"
-        if (id === "all")
-            return "Alle"
-        if (id === "installed")
-            return "Installiert"
+        const labels = ({
+            "featured": Style.I18n.choose("Empfohlen", "Featured"),
+            "all": Style.I18n.choose("Alle WebApps", "All WebApps"),
+            "installed": Style.I18n.choose("Installiert", "Installed"),
+            "ai": "AI",
+            "messaging": "Messaging",
+            "google": "Google",
+            "microsoft": "Microsoft",
+            "proton": "Proton",
+            "productivity": Style.I18n.choose("Produktivität", "Productivity"),
+            "social": Style.I18n.choose("Soziales", "Social"),
+            "video": "Video",
+            "music": Style.I18n.choose("Musik", "Music"),
+            "development": Style.I18n.choose("Entwicklung", "Development"),
+            "design": "Design",
+            "cloud": "Cloud",
+            "shopping": "Shopping",
+            "travel": Style.I18n.choose("Reisen", "Travel")
+        })
+        if (labels[id])
+            return labels[id]
         for (let i = 0; i < categories.length; ++i) {
             if (categories[i].id === id)
                 return categories[i].label
@@ -128,25 +143,25 @@ ShellRoot {
 
     function categoryDescription(id) {
         const descriptions = ({
-            "featured": "Empfohlene WebApps",
-            "all": "Vollständiger Katalog",
-            "installed": "Lokal eingerichtete WebApps",
-            "ai": "Assistenten und KI-Werkzeuge",
-            "messaging": "Chats und Kommunikation",
-            "google": "Google Dienste",
-            "microsoft": "Microsoft Dienste",
-            "proton": "Proton Dienste",
-            "productivity": "Arbeit und Organisation",
-            "social": "Soziale Netzwerke",
-            "video": "Video und Streaming",
-            "music": "Musik und Audio",
-            "development": "Entwicklung und Code",
-            "design": "Design und Kreativität",
-            "cloud": "Cloud und Dateien",
-            "shopping": "Shopping und Handel",
-            "travel": "Reisen und Mobilität"
+            "featured": Style.I18n.choose("Empfohlene WebApps", "Recommended WebApps"),
+            "all": Style.I18n.choose("Vollständiger Katalog", "Complete catalog"),
+            "installed": Style.I18n.choose("Lokal eingerichtete WebApps", "Locally installed WebApps"),
+            "ai": Style.I18n.choose("Assistenten und KI-Werkzeuge", "Assistants and AI tools"),
+            "messaging": Style.I18n.choose("Chats und Kommunikation", "Chats and communication"),
+            "google": Style.I18n.choose("Google-Dienste", "Google services"),
+            "microsoft": Style.I18n.choose("Microsoft-Dienste", "Microsoft services"),
+            "proton": Style.I18n.choose("Proton-Dienste", "Proton services"),
+            "productivity": Style.I18n.choose("Arbeit und Organisation", "Work and organization"),
+            "social": Style.I18n.choose("Soziale Netzwerke", "Social networks"),
+            "video": Style.I18n.choose("Video und Streaming", "Video and streaming"),
+            "music": Style.I18n.choose("Musik und Audio", "Music and audio"),
+            "development": Style.I18n.choose("Entwicklung und Code", "Development and code"),
+            "design": Style.I18n.choose("Design und Kreativität", "Design and creativity"),
+            "cloud": Style.I18n.choose("Cloud und Dateien", "Cloud and files"),
+            "shopping": Style.I18n.choose("Shopping und Handel", "Shopping and commerce"),
+            "travel": Style.I18n.choose("Reisen und Mobilität", "Travel and mobility")
         })
-        return descriptions[id] || "WebApps in dieser Kategorie"
+        return descriptions[id] || Style.I18n.choose("WebApps in dieser Kategorie", "WebApps in this category")
     }
 
     function categoryIcon(id) {
@@ -296,10 +311,10 @@ ShellRoot {
         try {
             const payload = JSON.parse(String(text ?? "").trim())
             if (payload.apiVersion !== 1 || payload.ok !== true || payload.command !== "list")
-                throw new Error("Unerwartete Catalog-Antwort")
+                throw new Error(Style.I18n.choose("Unerwartete Katalogantwort", "Unexpected catalog response"))
             const parsed = payload.data || ({})
             if (parsed.schemaVersion !== 2)
-                throw new Error("Unerwartete Catalog-Version: " + parsed.schemaVersion)
+                throw new Error(Style.I18n.choose("Unerwartete Katalogversion: ", "Unexpected catalog version: ") + parsed.schemaVersion)
             catalogData = parsed
             apps = parsed.apps || []
             categories = parsed.categories || []
@@ -315,11 +330,11 @@ ShellRoot {
             }
             catalogReady = true
             catalogError = false
-            statusText = apps.length + " WebApps geladen"
+            statusText = apps.length + Style.I18n.choose(" WebApps geladen", " WebApps loaded")
             if (!root.startupReady) {
                 root.startupCatalogDone = true
-                root.startupLabel = "Applet Status"
-                root.startupDetail = "Applet-Aktivierungen werden geladen"
+                root.startupLabel = Style.I18n.choose("Applet-Status", "Applet status")
+                root.startupDetail = Style.I18n.choose("Applet-Aktivierungen werden geladen", "Loading applet activation")
                 root.startupProgress = Math.max(root.startupProgress, 0.985)
                 root.refreshAppletState()
                 root.maybeFinishStartup()
@@ -330,11 +345,11 @@ ShellRoot {
             categories = []
             catalogReady = false
             catalogError = true
-            statusText = "Catalog konnte nicht gelesen werden: " + e
+            statusText = Style.I18n.choose("Katalog konnte nicht gelesen werden: ", "Catalog could not be read: ") + e
             if (!root.startupReady) {
                 root.startupError = true
-                root.startupLabel = "Start fehlgeschlagen"
-                root.startupDetail = "Katalog konnte nicht über die CLI geladen werden"
+                root.startupLabel = Style.I18n.choose("Start fehlgeschlagen", "Startup failed")
+                root.startupDetail = Style.I18n.choose("Katalog konnte nicht über die CLI geladen werden", "Catalog could not be loaded through the CLI")
                 root.startupProgress = 1.0
             }
         }
@@ -351,7 +366,7 @@ ShellRoot {
         if (root.startupPreflightDone && root.startupCatalogDone && root.startupAppletDone) {
             root.startupStage = "ready"
             root.startupLabel = "WebApps Manager"
-            root.startupDetail = "Bereit"
+            root.startupDetail = Style.I18n.choose("Bereit", "Ready")
             root.startupProgress = 1.0
             startupFinishDelay.restart()
         }
@@ -370,7 +385,7 @@ ShellRoot {
         try {
             const payload = JSON.parse(text)
             if (payload.apiVersion !== 1 || payload.ok !== true || payload.command !== "applet-state")
-                throw new Error("Unerwartete Applet-State-Antwort")
+                throw new Error(Style.I18n.choose("Unerwartete Applet-Statusantwort", "Unexpected applet state response"))
             const next = ({})
             const items = payload.data?.apps ?? []
             for (let i = 0; i < items.length; ++i) {
@@ -388,8 +403,8 @@ ShellRoot {
             root.appletStateAvailable = false
             if (!root.startupReady && root.startupPreflightDone) {
                 root.startupError = true
-                root.startupLabel = "Start fehlgeschlagen"
-                root.startupDetail = "Applet-Status konnte nicht gelesen werden"
+                root.startupLabel = Style.I18n.choose("Start fehlgeschlagen", "Startup failed")
+                root.startupDetail = Style.I18n.choose("Applet-Status konnte nicht gelesen werden", "Applet state could not be read")
                 root.startupProgress = 1.0
             }
         }
@@ -402,14 +417,14 @@ ShellRoot {
 
     function capabilityLabel(name) {
         const labels = ({
-            "notifications": "Benachrichtigungen",
+            "notifications": Style.I18n.choose("Benachrichtigungen", "Notifications"),
             "badge": "Badge",
-            "preview": "Vorschau",
+            "preview": Style.I18n.choose("Vorschau", "Preview"),
             "now_playing": "Now Playing",
-            "playback_controls": "Wiedergabesteuerung",
-            "live_preview": "Live-Vorschau",
-            "video_crop": "Video-Zuschnitt",
-            "pin": "Anheften",
+            "playback_controls": Style.I18n.choose("Wiedergabesteuerung", "Playback controls"),
+            "live_preview": Style.I18n.choose("Live-Vorschau", "Live preview"),
+            "video_crop": Style.I18n.choose("Video-Zuschnitt", "Video crop"),
+            "pin": Style.I18n.choose("Anheften", "Pin"),
             "artwork": "Cover / Artwork"
         })
         return labels[name] || name
@@ -417,17 +432,17 @@ ShellRoot {
 
     function capabilityDescription(name) {
         const descriptions = ({
-            "notifications": "Benachrichtigungsstatus im Applet anzeigen",
-            "badge": "Anzahl neuer Ereignisse am Bar-Icon anzeigen",
-            "preview": "Benachrichtigungsinhalte im Popout anzeigen",
-            "now_playing": "Aktuelle Medieninformationen im Popout anzeigen",
-            "playback_controls": "Zurück, Play/Pause und Weiter anzeigen",
-            "live_preview": "Livebild des Video-Fensters verwenden",
-            "video_crop": "Livebild automatisch auf den Videobereich zuschneiden",
-            "pin": "Anheften des Medien-Popouts erlauben",
-            "artwork": "Cover- bzw. Artwork-Bild anzeigen"
+            "notifications": Style.I18n.choose("Benachrichtigungsstatus im Applet anzeigen", "Show notification status in the applet"),
+            "badge": Style.I18n.choose("Anzahl neuer Ereignisse am Bar-Icon anzeigen", "Show the number of new events on the bar icon"),
+            "preview": Style.I18n.choose("Benachrichtigungsinhalte im Popout anzeigen", "Show notification content in the popout"),
+            "now_playing": Style.I18n.choose("Aktuelle Medieninformationen im Popout anzeigen", "Show current media information in the popout"),
+            "playback_controls": Style.I18n.choose("Zurück, Play/Pause und Weiter anzeigen", "Show previous, play/pause and next controls"),
+            "live_preview": Style.I18n.choose("Livebild des Video-Fensters verwenden", "Use a live preview of the video window"),
+            "video_crop": Style.I18n.choose("Livebild automatisch auf den Videobereich zuschneiden", "Automatically crop the live preview to the video area"),
+            "pin": Style.I18n.choose("Anheften des Medien-Popouts erlauben", "Allow pinning the media popout"),
+            "artwork": Style.I18n.choose("Cover- bzw. Artwork-Bild anzeigen", "Show cover or artwork image")
         })
-        return descriptions[name] || "Capability aktivieren oder deaktivieren"
+        return descriptions[name] || Style.I18n.choose("Funktion aktivieren oder deaktivieren", "Enable or disable capability")
     }
 
     function openActionMenu(app) {
@@ -449,25 +464,25 @@ ShellRoot {
             return []
         const entries = []
         if (app.installed === true)
-            entries.push({ id: "launch", group: "WebApp", title: root.appRunning(app.id) ? "WebApp fokussieren" : "WebApp öffnen", description: root.appRunning(app.id) ? "Zum bereits laufenden WebApp-Fenster wechseln." : "Die installierte WebApp in Firefox starten.", label: root.appRunning(app.id) ? "Fokussieren" : "Öffnen", primary: true, danger: false })
+            entries.push({ id: "launch", group: "WebApp", title: root.appRunning(app.id) ? Style.I18n.choose("WebApp fokussieren", "Focus WebApp") : Style.I18n.choose("WebApp öffnen", "Open WebApp"), description: root.appRunning(app.id) ? Style.I18n.choose("Zum bereits laufenden WebApp-Fenster wechseln.", "Switch to the running WebApp window.") : Style.I18n.choose("Die installierte WebApp in Firefox starten.", "Launch the installed WebApp in Firefox."), label: root.appRunning(app.id) ? Style.I18n.choose("Fokussieren", "Focus") : Style.I18n.choose("Öffnen", "Open"), primary: true, danger: false })
         else
-            entries.push({ id: "install", group: "WebApp", title: "WebApp installieren", description: "Firefox-Profil, Desktop-Eintrag und verwaltete Integration einrichten.", label: "Installieren", primary: true, danger: false })
+            entries.push({ id: "install", group: "WebApp", title: Style.I18n.choose("WebApp installieren", "Install WebApp"), description: Style.I18n.choose("Firefox-Profil, Desktop-Eintrag und verwaltete Integration einrichten.", "Set up the Firefox profile, desktop entry and managed integration."), label: Style.I18n.choose("Installieren", "Install"), primary: true, danger: false })
         if (app.installed === true && app.applet?.available === true && app.applet?.support === "supported") {
-            entries.push({ id: "applet-toggle", type: "toggle", group: "Applet", title: "TopBar-Applet", description: "Diese WebApp als Applet in der Caelestia TopBar anzeigen.", danger: false })
-            entries.push({ id: "applet-settings", group: "Applet", title: "Applet-Einstellungen", description: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", label: "Öffnen", danger: false })
+            entries.push({ id: "applet-toggle", type: "toggle", group: "Applet", title: "TopBar Applet", description: Style.I18n.choose("Diese WebApp als Applet in der Caelestia TopBar anzeigen.", "Show this WebApp as an applet in the Caelestia TopBar."), danger: false })
+            entries.push({ id: "applet-settings", group: "Applet", title: Style.I18n.choose("Applet-Einstellungen", "Applet settings"), description: Style.I18n.choose("Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", "Configure capabilities such as badge, preview or playback controls."), label: Style.I18n.choose("Öffnen", "Open"), danger: false })
         }
         if (app.installed === true) {
-            entries.push({ id: "setup", group: "Verwaltung", title: "Firefox-Profil & Berechtigungen", description: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", label: "Einrichten", danger: false })
-            entries.push({ id: "repair", group: "Verwaltung", title: "WebApp reparieren", description: "Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen.", label: "Reparieren", danger: false })
+            entries.push({ id: "setup", group: Style.I18n.choose("Verwaltung", "Management"), title: Style.I18n.choose("Firefox-Profil & Berechtigungen", "Firefox profile & permissions"), description: Style.I18n.choose("WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", "Set up the WebApp profile again and prepare required Firefox permissions."), label: Style.I18n.choose("Einrichten", "Set up"), danger: false })
+            entries.push({ id: "repair", group: Style.I18n.choose("Verwaltung", "Management"), title: Style.I18n.choose("WebApp reparieren", "Repair WebApp"), description: Style.I18n.choose("Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen.", "Check the installation and restore managed files and metadata."), label: Style.I18n.choose("Reparieren", "Repair"), danger: false })
         }
         if (app.source === "user")
-            entries.push({ id: "edit", group: "Verwaltung", title: "Eigene WebApp bearbeiten", description: "Name, URL, Kategorie und Icon der eigenen WebApp ändern.", label: "Bearbeiten", danger: false })
+            entries.push({ id: "edit", group: Style.I18n.choose("Verwaltung", "Management"), title: Style.I18n.choose("Eigene WebApp bearbeiten", "Edit custom WebApp"), description: Style.I18n.choose("Name, URL, Kategorie und Icon der eigenen WebApp ändern.", "Change the custom WebApp's name, URL, category and icon."), label: Style.I18n.choose("Bearbeiten", "Edit"), danger: false })
         entries.push({
             id: "remove",
-            group: "Entfernen",
-            title: app.installed === true ? "WebApp deinstallieren" : "Aus dem Katalog entfernen",
-            description: app.installed === true ? "Die installierte WebApp nach einer Bestätigung entfernen." : "Diese eigene WebApp aus dem lokalen Katalog entfernen.",
-            label: app.installed === true ? "Deinstallieren" : "Entfernen",
+            group: Style.I18n.choose("Entfernen", "Remove"),
+            title: app.installed === true ? Style.I18n.choose("WebApp deinstallieren", "Uninstall WebApp") : Style.I18n.choose("Aus dem Katalog entfernen", "Remove from catalog"),
+            description: app.installed === true ? Style.I18n.choose("Die installierte WebApp nach einer Bestätigung entfernen.", "Remove the installed WebApp after confirmation.") : Style.I18n.choose("Diese eigene WebApp aus dem lokalen Katalog entfernen.", "Remove this custom WebApp from the local catalog."),
+            label: app.installed === true ? Style.I18n.choose("Deinstallieren", "Uninstall") : Style.I18n.choose("Entfernen", "Remove"),
             danger: true
         })
         return entries
@@ -523,17 +538,17 @@ ShellRoot {
         try {
             const payload = JSON.parse(text)
             if (payload.apiVersion !== 1 || payload.ok !== true || payload.command !== "applet-settings")
-                throw new Error("Unerwartete Applet-Settings-Antwort")
+                throw new Error(Style.I18n.choose("Unerwartete Applet-Einstellungsantwort", "Unexpected applet settings response"))
             const app = payload.data?.apps?.[0] ?? null
             if (!app || !root.appletSettingsApp || app.appId !== root.appletSettingsApp.id)
-                throw new Error("Applet-Settings fehlen")
+                throw new Error(Style.I18n.choose("Applet-Einstellungen fehlen", "Applet settings are missing"))
             const values = app.settings || ({})
             root.appletSettingsItems = (app.capabilities || []).map(function(cap) {
                 return ({ name: cap, enabled: values[cap] !== false })
             })
             root.appletSettingsError = ""
         } catch (e) {
-            root.appletSettingsError = "Applet-Einstellungen konnten nicht gelesen werden."
+            root.appletSettingsError = Style.I18n.choose("Applet-Einstellungen konnten nicht gelesen werden.", "Applet settings could not be read.")
         }
         root.appletSettingsBusy = false
     }
@@ -557,15 +572,15 @@ ShellRoot {
         try {
             const payload = JSON.parse(text)
             if (payload.apiVersion !== 1 || payload.ok !== true || payload.command !== "runtime")
-                throw new Error("Unerwartete Runtime-Antwort")
+                throw new Error(Style.I18n.choose("Unerwartete Runtime-Antwort", "Unexpected runtime response"))
             const data = payload.data || ({})
             runtimeByApp = data.apps || ({})
             runtimeStateAvailable = data.runtimeAvailable === true
-            runtimeStatusText = runtimeStateAvailable ? "Runtime live" : "Runtime nicht verfügbar"
+            runtimeStatusText = runtimeStateAvailable ? "Runtime live" : Style.I18n.choose("Runtime nicht verfügbar", "Runtime unavailable")
         } catch (e) {
             runtimeByApp = ({})
             runtimeStateAvailable = false
-            runtimeStatusText = "Runtime-Status konnte nicht gelesen werden"
+            runtimeStatusText = Style.I18n.choose("Runtime-Status konnte nicht gelesen werden", "Runtime status could not be read")
         }
     }
 
@@ -637,15 +652,15 @@ ShellRoot {
 
         const id = root.wizardEditing ? root.wizardEditingId : root.wizardId.trim()
         if (root.wizardName.trim().length === 0) {
-            root.wizardError = "Name darf nicht leer sein."
+            root.wizardError = Style.I18n.choose("Name darf nicht leer sein.", "Name must not be empty.")
             return
         }
         if (id.length === 0) {
-            root.wizardError = "App-ID darf nicht leer sein."
+            root.wizardError = Style.I18n.choose("App-ID darf nicht leer sein.", "App ID must not be empty.")
             return
         }
         if (!/^https?:\/\/.+/.test(root.wizardUrl.trim())) {
-            root.wizardError = "Bitte eine vollständige http(s)-URL eingeben."
+            root.wizardError = Style.I18n.choose("Bitte eine vollständige http(s)-URL eingeben.", "Enter a complete HTTP(S) URL.")
             return
         }
 
@@ -667,8 +682,8 @@ ShellRoot {
         root.actionAppId = id
         root.actionError = false
         root.actionStatusText = root.wizardEditing
-            ? "WebApp wird aktualisiert…"
-            : "WebApp wird angelegt…"
+            ? Style.I18n.choose("WebApp wird aktualisiert…", "Updating WebApp…")
+            : Style.I18n.choose("WebApp wird angelegt…", "Creating WebApp…")
         actionProcess.command = root.wizardEditing
             ? [root.projectRoot + "/bin/caelestia-webapps", "user-update", root.wizardEditingId, payload]
             : [root.projectRoot + "/bin/caelestia-webapps", "user-create", payload]
@@ -677,16 +692,16 @@ ShellRoot {
 
     function commandLabel(command) {
         const labels = {
-            "launch": "Öffnen",
+            "launch": Style.I18n.choose("Öffnen", "Open"),
             "setup": "Setup",
-            "install": "Installieren",
-            "repair": "Reparieren",
-            "uninstall": "Deinstallieren",
-            "uninstall-close": "Schließen & deinstallieren",
+            "install": Style.I18n.choose("Installieren", "Install"),
+            "repair": Style.I18n.choose("Reparieren", "Repair"),
+            "uninstall": Style.I18n.choose("Deinstallieren", "Uninstall"),
+            "uninstall-close": Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall"),
             "applet-set": "Applet",
-            "user-create": "Anlegen",
-            "user-update": "Speichern",
-            "user-delete": "Aus Katalog entfernen"
+            "user-create": Style.I18n.choose("Anlegen", "Create"),
+            "user-update": Style.I18n.choose("Speichern", "Save"),
+            "user-delete": Style.I18n.choose("Aus Katalog entfernen", "Remove from catalog")
         }
         return labels[command] || command
     }
@@ -700,8 +715,8 @@ ShellRoot {
                 return
             Quickshell.execDetached([root.projectRoot + "/bin/caelestia-webapps", "launch", app.id])
             root.actionStatusText = root.appRunning(app.id)
-                ? app.name + " wird fokussiert…"
-                : app.name + " wird geöffnet…"
+                ? app.name + Style.I18n.choose(" wird fokussiert…", " is being focused…")
+                : app.name + Style.I18n.choose(" wird geöffnet…", " is opening…")
             root.actionError = false
             root.refreshRuntimeSoon()
             actionNoticeTimer.restart()
@@ -727,7 +742,7 @@ ShellRoot {
         root.actionCommand = "applet-set"
         root.actionAppId = app.id
         root.actionError = false
-        root.actionStatusText = (enabled ? "Applet aktivieren: " : "Applet deaktivieren: ") + app.name + "…"
+        root.actionStatusText = (enabled ? Style.I18n.choose("Applet aktivieren: ", "Enable applet: ") : Style.I18n.choose("Applet deaktivieren: ", "Disable applet: ")) + app.name + "…"
         actionProcess.command = [
             root.projectRoot + "/bin/caelestia-webapps",
             "applet-set",
@@ -742,21 +757,21 @@ ShellRoot {
             const payload = JSON.parse(text)
             const expected = root.actionCommand
             if (payload.apiVersion !== 1 || payload.command !== expected)
-                throw new Error("Unerwartete API-Antwort")
+                throw new Error(Style.I18n.choose("Unerwartete API-Antwort", "Unexpected API response"))
 
             if (payload.ok === true) {
                 const app = root.apps.find(function(candidate) {
                     return candidate.id === root.actionAppId
                 })
                 const name = app ? app.name : root.actionAppId
-                root.actionStatusText = root.commandLabel(expected) + " abgeschlossen: " + name
+                root.actionStatusText = root.commandLabel(expected) + Style.I18n.choose(" abgeschlossen: ", " completed: ") + name
                 root.actionError = false
                 if (expected === "applet-set") {
                     const next = Object.assign({}, root.appletEnabledByApp)
                     next[root.actionAppId] = payload.data?.enabled === true
                     root.appletEnabledByApp = next
                     root.appletStateAvailable = true
-                    root.actionStatusText = (payload.data?.enabled === true ? "Applet aktiviert: " : "Applet deaktiviert: ") + name
+                    root.actionStatusText = (payload.data?.enabled === true ? Style.I18n.choose("Applet aktiviert: ", "Applet enabled: ") : Style.I18n.choose("Applet deaktiviert: ", "Applet disabled: ")) + name
                 }
                 if (expected === "user-create" || expected === "user-update") {
                     root.wizardOpen = false
@@ -770,7 +785,7 @@ ShellRoot {
                     root.chainedCatalogRemoval = false
                     root.continuationScheduled = true
                     root.actionCommand = "user-delete"
-                    root.actionStatusText = "Aus Katalog entfernen: " + name + "…"
+                    root.actionStatusText = Style.I18n.choose("Aus Katalog entfernen: ", "Remove from catalog: ") + name + "…"
                     actionProcess.command = [
                         root.projectRoot + "/bin/caelestia-webapps",
                         "user-delete",
@@ -783,13 +798,13 @@ ShellRoot {
                 }
             } else {
                 const error = payload.error || ({})
-                root.actionStatusText = error.message || (root.commandLabel(expected) + " fehlgeschlagen")
+                root.actionStatusText = error.message || (root.commandLabel(expected) + Style.I18n.choose(" fehlgeschlagen", " failed"))
                 root.actionError = true
                 if (expected === "user-create" || expected === "user-update")
                     root.wizardError = root.actionStatusText
             }
         } catch (e) {
-            root.actionStatusText = "Ungültige Antwort der WebApps-API"
+            root.actionStatusText = Style.I18n.choose("Ungültige Antwort der WebApps-API", "Invalid response from the WebApps API")
             root.actionError = true
         }
     }
@@ -850,8 +865,8 @@ ShellRoot {
                 root.catalogError = true
                 if (!root.startupReady) {
                     root.startupError = true
-                    root.startupLabel = "Start fehlgeschlagen"
-                    root.startupDetail = "Katalog-CLI konnte nicht abgeschlossen werden"
+                    root.startupLabel = Style.I18n.choose("Start fehlgeschlagen", "Startup failed")
+                    root.startupDetail = Style.I18n.choose("Katalog-CLI konnte nicht abgeschlossen werden", "Catalog CLI did not complete")
                     root.startupProgress = 1.0
                 }
             }
@@ -868,8 +883,8 @@ ShellRoot {
         onExited: function(exitCode, exitStatus) {
             if (exitCode !== 0) {
                 root.startupError = true
-                root.startupLabel = "Start fehlgeschlagen"
-                root.startupDetail = "Preflight konnte nicht abgeschlossen werden"
+                root.startupLabel = Style.I18n.choose("Start fehlgeschlagen", "Startup failed")
+                root.startupDetail = Style.I18n.choose("Preflight konnte nicht abgeschlossen werden", "Preflight did not complete")
                 root.startupProgress = 1.0
             }
         }
@@ -886,7 +901,7 @@ ShellRoot {
 
     FileDialog {
         id: iconFileDialog
-        title: "WebApp-Icon auswählen"
+        title: Style.I18n.choose("WebApp-Icon auswählen", "Select WebApp icon")
         nameFilters: ["Icons (*.svg *.png)"]
         onAccepted: { root.wizardIconFile = selectedFile.toString(); root.wizardIconMode = "local" }
     }
@@ -901,7 +916,7 @@ ShellRoot {
             if (exitCode !== 0) {
                 root.runtimeByApp = ({})
                 root.runtimeStateAvailable = false
-                root.runtimeStatusText = "Runtime-Abfrage fehlgeschlagen"
+                root.runtimeStatusText = Style.I18n.choose("Runtime-Abfrage fehlgeschlagen", "Runtime query failed")
             }
         }
     }
@@ -918,8 +933,8 @@ ShellRoot {
                 root.appletStateAvailable = false
                 if (!root.startupReady && root.startupPreflightDone) {
                     root.startupError = true
-                    root.startupLabel = "Start fehlgeschlagen"
-                    root.startupDetail = "Applet-Status konnte nicht geladen werden"
+                    root.startupLabel = Style.I18n.choose("Start fehlgeschlagen", "Startup failed")
+                    root.startupDetail = Style.I18n.choose("Applet-Status konnte nicht geladen werden", "Applet state could not be loaded")
                     root.startupProgress = 1.0
                 }
             }
@@ -934,7 +949,7 @@ ShellRoot {
         onExited: function(exitCode, exitStatus) {
             if (exitCode !== 0) {
                 root.appletSettingsBusy = false
-                root.appletSettingsError = "Applet-Einstellungen konnten nicht geladen werden."
+                root.appletSettingsError = Style.I18n.choose("Applet-Einstellungen konnten nicht geladen werden.", "Applet settings could not be loaded.")
             }
         }
     }
@@ -950,7 +965,7 @@ ShellRoot {
         onExited: function(exitCode, exitStatus) {
             if (exitCode !== 0) {
                 root.appletSettingsBusy = false
-                root.appletSettingsError = "Applet-Einstellung konnte nicht gespeichert werden."
+                root.appletSettingsError = Style.I18n.choose("Applet-Einstellung konnte nicht gespeichert werden.", "Applet setting could not be saved.")
                 return
             }
             if (root.appletSettingsApp) {
@@ -967,7 +982,7 @@ ShellRoot {
         }
         onExited: function(exitCode, exitStatus) {
             if (exitCode !== 0 && !root.actionError) {
-                root.actionStatusText = root.commandLabel(root.actionCommand) + " fehlgeschlagen"
+                root.actionStatusText = root.commandLabel(root.actionCommand) + Style.I18n.choose(" fehlgeschlagen", " failed")
                 root.actionError = true
             }
             root.finishAction()
@@ -1145,13 +1160,13 @@ ShellRoot {
                     Text {
                         Layout.fillWidth: true
                         text: root.startupError
-                            ? "Bitte Manager aus einem Terminal starten und Log prüfen."
-                            : "Theme · Icons · Katalog · Runtime"
+                            ? Style.I18n.choose("Bitte Manager aus einem Terminal starten und Log prüfen.", "Start the Manager from a terminal and check the log.")
+                            : Style.I18n.choose("Theme · Icons · Katalog · Runtime", "Theme · Icons · Catalog · Runtime")
                         color: Style.Theme.textMuted
                         font.pixelSize: Style.Tokens.fontLabel
                     }
                     Text {
-                        text: Style.Theme.caelestiaThemeAvailable ? "Caelestia Theme" : "Theme wird geladen"
+                        text: Style.Theme.caelestiaThemeAvailable ? "Caelestia Theme" : Style.I18n.choose("Theme wird geladen", "Loading theme")
                         color: Style.Theme.hint
                         font.pixelSize: Style.Tokens.fontLabel
                     }
@@ -1233,7 +1248,7 @@ ShellRoot {
                             id: managerSearch
                             Layout.fillWidth: true
                             text: root.searchQuery
-                            placeholderText: "WebApps durchsuchen…"
+                            placeholderText: Style.I18n.choose("WebApps durchsuchen…", "Search WebApps…")
                             onChanged: function(value) { root.searchQuery = value }
                         }
 
@@ -1252,16 +1267,16 @@ ShellRoot {
 
                                 Repeater {
                                     model: [
-                                        { id: "featured", label: "Featured" },
-                                        { id: "all", label: "Alle WebApps" },
-                                        { id: "installed", label: "Installiert" }
+                                        { id: "featured", label: root.categoryLabel("featured") },
+                                        { id: "all", label: root.categoryLabel("all") },
+                                        { id: "installed", label: root.categoryLabel("installed") }
                                     ]
 
                                     delegate: Style.NavigationItem {
                                         required property var modelData
                                         required property int index
                                         Layout.fillWidth: true
-                                        label: modelData.label
+                                        label: root.categoryLabel(modelData.id)
                                         description: root.categoryCount(modelData.id) + " · " + root.categoryDescription(modelData.id)
                                         icon: root.categoryIcon(modelData.id)
                                         selected: root.selectedCategory === modelData.id
@@ -1280,7 +1295,7 @@ ShellRoot {
                                         required property var modelData
                                         required property int index
                                         Layout.fillWidth: true
-                                        label: modelData.label
+                                        label: root.categoryLabel(modelData.id)
                                         description: modelData.count + " · " + root.categoryDescription(modelData.id)
                                         icon: root.categoryIcon(modelData.id)
                                         selected: root.selectedCategory === modelData.id
@@ -1294,8 +1309,8 @@ ShellRoot {
 
                         Style.NavigationItem {
                             Layout.fillWidth: true
-                            label: "Über"
-                            description: "Projektinformationen und Credits"
+                            label: Style.I18n.choose("Über", "About")
+                            description: Style.I18n.choose("Projektinformationen und Credits", "Project information and credits")
                             icon: "\ue88e"
                             selected: root.mainPage === "about"
                             firstInGroup: true
@@ -1453,7 +1468,7 @@ ShellRoot {
                                                     }
 
                                                     Text {
-                                                        text: modelData.comment || modelData.genericName
+                                                        text: Style.I18n.appDescription(modelData)
                                                         color: Style.Theme.textSubtle
                                                         font.pixelSize: Style.Tokens.fontBodySmall
                                                         elide: Text.ElideRight
@@ -1507,10 +1522,10 @@ ShellRoot {
                                             Text {
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                                 text: root.searchQuery.length > 0
-                                                    ? "Keine passenden WebApps"
+                                                    ? Style.I18n.choose("Keine passenden WebApps", "No matching WebApps")
                                                     : (root.selectedCategory === "installed"
-                                                        ? "Keine WebApps installiert"
-                                                        : "In dieser Kategorie gibt es keine WebApps")
+                                                        ? Style.I18n.choose("Keine WebApps installiert", "No WebApps installed")
+                                                        : Style.I18n.choose("In dieser Kategorie gibt es keine WebApps", "There are no WebApps in this category"))
                                                 color: Style.Theme.textMuted
                                                 font.pixelSize: Style.Tokens.fontBodyLarge
                                                 font.weight: Font.Medium
@@ -1519,10 +1534,10 @@ ShellRoot {
                                             Text {
                                                 anchors.horizontalCenter: parent.horizontalCenter
                                                 text: root.searchQuery.length > 0
-                                                    ? "Suche anpassen oder mit Esc leeren"
+                                                    ? Style.I18n.choose("Suche anpassen oder mit Esc leeren", "Adjust the search or clear it with Esc")
                                                     : (root.selectedCategory === "installed"
-                                                        ? "Installiere eine WebApp aus dem Katalog"
-                                                        : "Wähle eine andere Kategorie oder lege eine eigene WebApp an")
+                                                        ? Style.I18n.choose("Installiere eine WebApp aus dem Katalog", "Install a WebApp from the catalog")
+                                                        : Style.I18n.choose("Wähle eine andere Kategorie oder lege eine eigene WebApp an", "Choose another category or create a custom WebApp"))
                                                 color: Style.Theme.textSubtle
                                                 font.pixelSize: Style.Tokens.fontBodySmall
                                             }
@@ -1620,10 +1635,10 @@ ShellRoot {
                         spacing: Style.Tokens.spaceLg
 
                         Style.PageHeader {
-                            title: root.wizardEditing ? "WebApp bearbeiten" : "WebApp hinzufügen"
+                            title: root.wizardEditing ? Style.I18n.choose("WebApp bearbeiten", "Edit WebApp") : Style.I18n.choose("WebApp hinzufügen", "Add WebApp")
                             subtitle: root.wizardEditing
-                                ? "Die App-ID bleibt unverändert. Änderungen werden als User-Definition gespeichert."
-                                : "Eigene Apps werden getrennt unter ~/.config/caelestia-webapps/apps gespeichert."
+                                ? Style.I18n.choose("Die App-ID bleibt unverändert. Änderungen werden als Benutzerdefinition gespeichert.", "The App ID remains unchanged. Changes are saved as a user definition.")
+                                : Style.I18n.choose("Eigene Apps werden getrennt unter ~/.config/caelestia-webapps/apps gespeichert.", "Custom apps are stored separately under ~/.config/caelestia-webapps/apps.")
                             interactive: !root.actionBusy
                             onBack: root.closeWizard()
                         }
@@ -1637,7 +1652,7 @@ ShellRoot {
                             Style.SettingsTextField {
                             id: wizardName
                             label: "Name"
-                            description: "Anzeigename der WebApp"
+                            description: Style.I18n.choose("Anzeigename der WebApp", "Display name of the WebApp")
                             value: root.wizardName
                             firstInGroup: true
                             field.KeyNavigation.tab: wizardId.field
@@ -1653,7 +1668,7 @@ ShellRoot {
                             Style.SettingsTextField {
                             id: wizardId
                             label: "App-ID"
-                            description: root.wizardEditing ? "Die App-ID bleibt beim Bearbeiten unverändert" : "Eindeutige technische Kennung"
+                            description: root.wizardEditing ? Style.I18n.choose("Die App-ID bleibt beim Bearbeiten unverändert", "The App ID remains unchanged while editing") : Style.I18n.choose("Eindeutige technische Kennung", "Unique technical identifier")
                             value: root.wizardId
                             readOnly: root.wizardEditing
                             field.KeyNavigation.tab: wizardUrl.field
@@ -1666,7 +1681,7 @@ ShellRoot {
                             Style.SettingsTextField {
                             id: wizardUrl
                             label: "URL"
-                            description: "Vollständige http(s)-Adresse"
+                            description: Style.I18n.choose("Vollständige HTTP(S)-Adresse", "Complete HTTP(S) address")
                             value: root.wizardUrl
                             lastInGroup: true
                             field.KeyNavigation.tab: root.wizardIconMode === "url" ? wizardIcon.field : wizardSaveButton
@@ -1676,15 +1691,15 @@ ShellRoot {
                             }
                         }
 
-                        Style.SectionHeader { text: "Darstellung" }
+                        Style.SectionHeader { text: Style.I18n.choose("Darstellung", "Appearance") }
 
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: Style.Tokens.spaceXs
 
                             Style.SettingsSelect {
-                            label: "Kategorie"
-                            description: "Gruppe im WebApp-Katalog"
+                            label: Style.I18n.choose("Kategorie", "Category")
+                            description: Style.I18n.choose("Gruppe im WebApp-Katalog", "Group in the WebApp catalog")
                             options: root.categories
                             value: root.wizardCategory
                             firstInGroup: true
@@ -1692,11 +1707,11 @@ ShellRoot {
                             }
 
                             Style.SettingsSelect {
-                            label: "Icon-Quelle"
+                            label: Style.I18n.choose("Icon-Quelle", "Icon source")
                             description: root.wizardIconMode === "auto"
-                                ? "Passendes Dashboard-Icon automatisch verwenden"
-                                : (root.wizardIconMode === "url" ? "Icon über eine URL laden" : "Lokale SVG- oder PNG-Datei verwenden")
-                            options: [{ id: "auto", label: "Automatisch" }, { id: "url", label: "URL" }, { id: "local", label: "Lokale Datei" }]
+                                ? Style.I18n.choose("Passendes Dashboard-Icon automatisch verwenden", "Automatically use a matching dashboard icon")
+                                : (root.wizardIconMode === "url" ? Style.I18n.choose("Icon über eine URL laden", "Load icon from a URL") : Style.I18n.choose("Lokale SVG- oder PNG-Datei verwenden", "Use a local SVG or PNG file"))
+                            options: [{ id: "auto", label: Style.I18n.choose("Automatisch", "Automatic") }, { id: "url", label: "URL" }, { id: "local", label: Style.I18n.choose("Lokale Datei", "Local file") }]
                             value: root.wizardIconMode
                             lastInGroup: root.wizardIconMode === "auto"
                             onSelected: function(value) {
@@ -1710,7 +1725,7 @@ ShellRoot {
                             id: wizardIcon
                             visible: root.wizardIconMode === "url"
                             label: "Icon-URL"
-                            description: "Direkte Adresse zu einer SVG- oder PNG-Datei"
+                            description: Style.I18n.choose("Direkte Adresse zu einer SVG- oder PNG-Datei", "Direct address of an SVG or PNG file")
                             value: root.wizardIconUrl
                             lastInGroup: true
                             field.KeyNavigation.tab: wizardSaveButton
@@ -1737,17 +1752,17 @@ ShellRoot {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 0
-                                    Text { text: "Lokale Icon-Datei"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { Layout.fillWidth: true; text: root.wizardIconFile.length > 0 ? root.wizardIconFile : "Keine Datei ausgewählt"; color: Style.Theme.textSubtle; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideMiddle }
+                                    Text { text: Style.I18n.choose("Lokale Icon-Datei", "Local icon file"); color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
+                                    Text { Layout.fillWidth: true; text: root.wizardIconFile.length > 0 ? root.wizardIconFile : Style.I18n.choose("Keine Datei ausgewählt", "No file selected"); color: Style.Theme.textSubtle; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideMiddle }
                                 }
-                                Style.ActionButton { label: "Auswählen"; interactive: !root.actionBusy; onClicked: iconFileDialog.open() }
+                                Style.ActionButton { label: Style.I18n.choose("Auswählen", "Select"); interactive: !root.actionBusy; onClicked: iconFileDialog.open() }
                             }
                             }
                         }
 
                         Style.SectionHeader {
                             visible: root.wizardIconPreview().length > 0
-                            text: "Vorschau"
+                            text: Style.I18n.choose("Vorschau", "Preview")
                         }
 
                         Rectangle {
@@ -1769,7 +1784,7 @@ ShellRoot {
                                     Layout.fillWidth: true
                                     spacing: 0
                                     Text { text: root.wizardName.length > 0 ? root.wizardName : "WebApp"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { text: "Icon-Vorschau"; color: Style.Theme.textSubtle; font.pixelSize: Style.Tokens.fontBodySmall }
+                                    Text { text: Style.I18n.choose("Icon-Vorschau", "Icon preview"); color: Style.Theme.textSubtle; font.pixelSize: Style.Tokens.fontBodySmall }
                                 }
                             }
                         }
@@ -1789,7 +1804,7 @@ ShellRoot {
                             Style.ActionButton {
                                 id: wizardCancelButton
                                 minimumWidth: 96
-                                label: "Abbrechen"
+                                label: Style.I18n.choose("Abbrechen", "Cancel")
                                 interactive: !root.actionBusy
                                 onClicked: root.closeWizard()
                             }
@@ -1798,7 +1813,7 @@ ShellRoot {
                                 minimumWidth: 112
                                 primary: true
                                 icon: root.wizardEditing ? "\ue161" : "\ue145"
-                                label: root.actionBusy ? "Bitte warten…" : (root.wizardEditing ? "Speichern" : "Anlegen")
+                                label: root.actionBusy ? Style.I18n.choose("Bitte warten…", "Please wait…") : (root.wizardEditing ? Style.I18n.choose("Speichern", "Save") : Style.I18n.choose("Anlegen", "Create"))
                                 interactive: !root.actionBusy
                                 onClicked: root.submitWizard()
                             }
@@ -1851,7 +1866,7 @@ ShellRoot {
                         spacing: Style.Tokens.spaceLg
 
                         Style.PageHeader {
-                            title: "WebApp-Info"
+                            title: Style.I18n.choose("WebApp-Info", "WebApp info")
                             interactive: !root.actionBusy
                             onBack: root.closeActionMenu()
                         }
@@ -1905,7 +1920,7 @@ ShellRoot {
 
                                         Text {
                                             Layout.fillWidth: true
-                                            text: root.actionMenuApp ? (root.actionMenuApp.comment || root.actionMenuApp.genericName) : ""
+                                            text: Style.I18n.appDescription(root.actionMenuApp)
                                             color: Style.Theme.textSubtle
                                             font.pixelSize: Style.Tokens.fontBodySmall
                                             wrapMode: Text.WordWrap
@@ -1959,27 +1974,27 @@ ShellRoot {
                                     }
                                 }
 
-                                Style.SectionHeader { text: "Details" }
+                                Style.SectionHeader { text: Style.I18n.choose("Details", "Details") }
 
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: Style.Tokens.spaceXs
 
                                     Style.SettingsInfoRow {
-                                        label: "Status"
-                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.installed ? (root.appRunning(root.actionMenuApp.id) ? "Installiert · läuft" : "Installiert") : "Nicht installiert")
+                                        label: Style.I18n.choose("Status", "Status")
+                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.installed ? (root.appRunning(root.actionMenuApp.id) ? Style.I18n.choose("Installiert · läuft", "Installed · running") : Style.I18n.choose("Installiert", "Installed")) : Style.I18n.choose("Nicht installiert", "Not installed"))
                                         firstInGroup: true
                                     }
                                     Style.SettingsInfoRow {
-                                        label: "Quelle"
-                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.source === "user" ? "Eigene App" : "Katalog-App")
+                                        label: Style.I18n.choose("Quelle", "Source")
+                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.source === "user" ? Style.I18n.choose("Eigene App", "Custom app") : Style.I18n.choose("Katalog-App", "Catalog app"))
                                     }
                                     Style.SettingsInfoRow {
                                         label: "App-ID"
                                         value: root.actionMenuApp ? root.actionMenuApp.id : ""
                                     }
                                     Style.SettingsInfoRow {
-                                        label: "Adresse"
+                                        label: Style.I18n.choose("Adresse", "Address")
                                         value: root.actionMenuApp ? root.actionMenuApp.url : ""
                                         lastInGroup: true
                                     }
@@ -2033,15 +2048,15 @@ ShellRoot {
                         spacing: Style.Tokens.spaceLg
 
                         Style.PageHeader {
-                            title: !root.appletSettingsApp ? "Applet-Einstellungen" : root.appletSettingsApp.name + " · Applet"
-                            subtitle: "Verfügbare Funktionen des Caelestia-Applets"
+                            title: !root.appletSettingsApp ? Style.I18n.choose("Applet-Einstellungen", "Applet settings") : root.appletSettingsApp.name + " · Applet"
+                            subtitle: Style.I18n.choose("Verfügbare Funktionen des Caelestia-Applets", "Available capabilities of the Caelestia applet")
                             interactive: !root.appletSettingsBusy
                             onBack: root.closeAppletSettings()
                         }
 
                         Text {
                             visible: root.appletSettingsBusy && root.appletSettingsItems.length === 0
-                            text: "Einstellungen werden geladen…"
+                            text: Style.I18n.choose("Einstellungen werden geladen…", "Loading settings…")
                             color: Style.Theme.textMuted
                             font.pixelSize: Style.Tokens.fontBodySmall
                         }
@@ -2049,7 +2064,7 @@ ShellRoot {
                         Style.SectionHeader {
                             visible: root.appletSettingsItems.length > 0
                             first: true
-                            text: "Funktionen"
+                            text: Style.I18n.choose("Funktionen", "Capabilities")
                         }
 
                         ColumnLayout {
@@ -2111,7 +2126,7 @@ ShellRoot {
                     spacing: Style.Tokens.spaceLg
 
                     Style.PageHeader {
-                        title: "Über"
+                        title: Style.I18n.choose("Über", "About")
                         showBack: false
                     }
 
@@ -2163,25 +2178,25 @@ ShellRoot {
                                 }
                             }
 
-                            Style.SectionHeader { text: "Projekt" }
+                            Style.SectionHeader { text: Style.I18n.choose("Projekt", "Project") }
 
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: Style.Tokens.spaceXs
 
                                 Style.SettingsInfoRow {
-                                    label: "Entwickelt von"
+                                    label: Style.I18n.choose("Entwickelt von", "Developed by")
                                     value: "psdl76"
                                     firstInGroup: true
                                 }
                                 Style.SettingsInfoRow {
-                                    label: "Zweck"
-                                    value: "WebApps für Hyprland und Caelestia"
+                                    label: Style.I18n.choose("Zweck", "Purpose")
+                                    value: Style.I18n.choose("WebApps für Hyprland und Caelestia", "WebApps for Hyprland and Caelestia")
                                     lastInGroup: true
                                 }
                             }
 
-                            Style.SectionHeader { text: "Technik" }
+                            Style.SectionHeader { text: Style.I18n.choose("Technik", "Technology") }
 
                             ColumnLayout {
                                 Layout.fillWidth: true
@@ -2193,17 +2208,17 @@ ShellRoot {
                                     firstInGroup: true
                                 }
                                 Style.SettingsInfoRow {
-                                    label: "WebApp-Laufzeit"
+                                    label: Style.I18n.choose("WebApp-Laufzeit", "WebApp runtime")
                                     value: "Firefox · Hyprland"
                                 }
                                 Style.SettingsInfoRow {
-                                    label: "Designvorbild"
+                                    label: Style.I18n.choose("Designvorbild", "Design reference")
                                     value: "Caelestia Shell · Nexus"
                                     lastInGroup: true
                                 }
                             }
 
-                            Style.SectionHeader { text: "Schnittstellen" }
+                            Style.SectionHeader { text: Style.I18n.choose("Schnittstellen", "Interfaces") }
 
                             ColumnLayout {
                                 Layout.fillWidth: true
@@ -2215,7 +2230,7 @@ ShellRoot {
                                     firstInGroup: true
                                 }
                                 Style.SettingsInfoRow {
-                                    label: "Katalogschema"
+                                    label: Style.I18n.choose("Katalogschema", "Catalog schema")
                                     value: "v2"
                                     lastInGroup: true
                                 }
@@ -2299,10 +2314,10 @@ ShellRoot {
                             text: !root.pendingUninstallApp
                                 ? ""
                                 : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user"
-                                    ? root.pendingUninstallApp.name + " aus dem Katalog entfernen?"
+                                    ? root.pendingUninstallApp.name + Style.I18n.choose(" aus dem Katalog entfernen?", " remove from catalog?")
                                     : (root.appRunning(root.pendingUninstallApp.id)
-                                        ? root.pendingUninstallApp.name + " läuft noch"
-                                        : "WebApp deinstallieren?"))
+                                        ? root.pendingUninstallApp.name + Style.I18n.choose(" läuft noch", " is still running")
+                                        : Style.I18n.choose("WebApp deinstallieren?", "Uninstall WebApp?")))
                             color: Style.Theme.textPrimary
                             font.pixelSize: Style.Tokens.fontTitle
                             font.weight: Font.DemiBold
@@ -2316,10 +2331,10 @@ ShellRoot {
                             text: !root.pendingUninstallApp
                                 ? ""
                                 : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user"
-                                    ? "Die User-App-Definition und ein verwaltetes User-Icon werden dauerhaft aus deinem Katalog entfernt."
+                                    ? Style.I18n.choose("Die Benutzer-App-Definition und ein verwaltetes Benutzer-Icon werden dauerhaft aus deinem Katalog entfernt.", "The user app definition and its managed user icon will be permanently removed from your catalog.")
                                     : (root.appRunning(root.pendingUninstallApp.id)
-                                        ? "Zum Deinstallieren muss das laufende WebApp-Fenster zuerst regulär geschlossen werden. Erst danach wird " + root.pendingUninstallApp.name + " deinstalliert."
-                                        : root.pendingUninstallApp.name + " wird deinstalliert. Das Firefox-Profil dieser WebApp wird dabei gemäß Engine-Regeln behandelt."))
+                                        ? Style.I18n.choose("Zum Deinstallieren muss das laufende WebApp-Fenster zuerst regulär geschlossen werden. Erst danach wird ", "The running WebApp window must be closed normally before uninstalling. Then ") + root.pendingUninstallApp.name + Style.I18n.choose(" deinstalliert.", " will be uninstalled.")
+                                        : root.pendingUninstallApp.name + Style.I18n.choose(" wird deinstalliert. Das Firefox-Profil dieser WebApp wird dabei gemäß Engine-Regeln behandelt.", " will be uninstalled. Its Firefox profile is handled according to the engine rules.")))
                             color: Style.Theme.dialogMuted
                             font.pixelSize: Style.Tokens.fontBody
                         }
@@ -2328,8 +2343,8 @@ ShellRoot {
                             visible: root.pendingUninstallApp
                                 && root.pendingUninstallApp.installed
                                 && root.pendingUninstallApp.source === "user"
-                            title: "Aus dem Katalog entfernen"
-                            description: "Löscht anschließend auch die User-App-Definition"
+                            title: Style.I18n.choose("Aus dem Katalog entfernen", "Remove from catalog")
+                            description: Style.I18n.choose("Löscht anschließend auch die Benutzer-App-Definition", "Also deletes the user app definition")
                             checked: root.removeFromCatalogAfterUninstall
                             firstInGroup: true
                             lastInGroup: true
@@ -2341,14 +2356,14 @@ ShellRoot {
                             spacing: Style.Tokens.spaceMd
                             Style.ActionButton {
                                 minimumWidth: 96
-                                label: "Abbrechen"
+                                label: Style.I18n.choose("Abbrechen", "Cancel")
                                 onClicked: root.cancelUninstall()
                             }
                             Style.ActionButton {
                                 minimumWidth: root.pendingUninstallApp && (!root.pendingUninstallApp.installed || root.appRunning(root.pendingUninstallApp.id)) ? 184 : 118
                                 danger: true
                                 icon: root.pendingUninstallApp && root.appRunning(root.pendingUninstallApp.id) ? "\ue5cd" : "\ue872"
-                                label: !root.pendingUninstallApp ? "" : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user" ? "Aus Katalog entfernen" : (root.appRunning(root.pendingUninstallApp.id) ? "Schließen & deinstallieren" : "Deinstallieren"))
+                                label: !root.pendingUninstallApp ? "" : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user" ? Style.I18n.choose("Aus Katalog entfernen", "Remove from catalog") : (root.appRunning(root.pendingUninstallApp.id) ? Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall") : Style.I18n.choose("Deinstallieren", "Uninstall")))
                                 onClicked: root.confirmUninstall()
                             }
                         }

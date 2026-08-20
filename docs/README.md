@@ -37,6 +37,17 @@ Phase 17 changes only the Manager's visual/layout contract. Phase 16.8 remains
 the frozen backend, runtime and packaged-lifecycle baseline. Phase 17.7 is the
 accepted and frozen Manager baseline.
 
+## Current reading order for Phase 18
+
+1. `../AGENTS.md`
+2. `phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
+3. `phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`
+
+Phase 18.1 adds German/English presentation without changing the frozen Phase
+17.7 layout or Phase 16.8 lifecycle contracts. Both language modes are live
+accepted and Phase 18.1 is frozen.
+
 ## Current release
 
 - `releases/RELEASE_0.4.0.md` — local/private 0.4.0 release
+- `releases/RELEASE_0.4.1.md` — localized 0.4.1 release candidate

@@ -33,6 +33,8 @@ The baseline represented by this workspace is:
 - Phase 17.6 — Nexus-style About page: LIVE ACCEPTED / FROZEN
 - Phase 17.7 — Manager visual acceptance and closing gate: ACCEPTED / FROZEN
 - Release 0.4.0 — local/private package release: RELEASED / TAGGED
+- Phase 18.1 — German/English Manager localization: LIVE ACCEPTED / FROZEN
+- Release 0.4.1 — localized package release: CANDIDATE / REAL LIFECYCLE PENDING
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -122,6 +124,7 @@ bash tests/test_phase16_8_installed_upgrade_migration.sh
 bash tests/test_shell_syntax.sh
 bash tests/run_phase13_gate.sh
 bash tests/run_phase17_7_closing_gate.sh
+bash tests/run_phase18_1_gate.sh
 ```
 
 Some tests require an isolated HOME/XDG environment. If a test unexpectedly touches the developer's real environment, stop and inspect the test setup instead of adapting product behavior to the host machine.
@@ -177,8 +180,9 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 is the current
-local/private tagged release.** Preserve the proven packaged lifecycle, the
-accepted Nexus-style Manager baseline and the standalone boundary from private
-Caelestia QML dependencies. Public publication remains blocked until a canonical
-repository URL and redistribution license are selected.
+**Phases 16.8, 17.7 and 18.1 are accepted and frozen. Release 0.4.0 remains the
+current local/private tagged release; 0.4.1 is the current candidate.** Preserve the proven
+packaged lifecycle, the accepted localized Nexus-style Manager baseline and the
+standalone boundary from private Caelestia QML dependencies. Complete the real
+install/uninstall check before tagging 0.4.1. Public publication remains blocked
+until a canonical repository URL and redistribution license are selected.

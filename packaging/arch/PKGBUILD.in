@@ -1,7 +1,7 @@
 # Local/private package prototype for Phase 13.
 # Select a real project license before public AUR publication.
 pkgname=caelestia-webapps
-pkgver=0.4.0
+pkgver=0.4.1
 pkgrel=1
 pkgdesc="Firefox-based WebApp manager for Hyprland and Caelestia"
 arch=('any')

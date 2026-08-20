@@ -13,7 +13,8 @@ qml=pathlib.Path(sys.argv[2]).read_text(encoding='utf-8')
 assert len(catalog['apps']) == 79
 assert any(a['featured'] for a in catalog['apps'])
 assert 'property string selectedCategory: "featured"' in qml
-assert '{ id: "featured", label: "Featured" }' in qml
+assert '{ id: "featured", label: root.categoryLabel("featured") }' in qml
+assert '"featured": Style.I18n.choose("Empfohlen", "Featured")' in qml
 assert 'id: navigationScroll' in qml
 assert 'Style.NavigationItem {' in qml
 assert 'contentHeight: navigationColumn.implicitHeight' in qml

@@ -15,8 +15,11 @@ Read in this order:
 9. `docs/phases/phase-17/PHASE17_5_WEBAPP_INFO_NAVIGATION.md`
 10. `docs/phases/phase-17/PHASE17_6_ABOUT_PAGE.md`
 11. `docs/phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
+12. `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`
 
 Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 is the current
-local/private tagged release. Do not alter the frozen CLI, lifecycle, applet,
+local/private tagged release. Phase 18.1 German/English Manager localization is
+accepted and frozen; 0.4.1 is the current release candidate awaiting a real
+install/uninstall check. Do not alter the frozen CLI, lifecycle, applet,
 capability or Manager visual contracts without a demonstrated regression or a
 new explicit phase.

@@ -10,8 +10,8 @@ assert 'property string projectVersion: "–"' in SHELL
 assert 'path: root.projectRoot + "/VERSION"' in SHELL
 assert 'String(versionFile.text() ?? "").trim()' in SHELL
 
-assert 'label: "Über"' in SHELL
-assert 'description: "Projektinformationen und Credits"' in SHELL
+assert 'label: Style.I18n.choose("Über", "About")' in SHELL
+assert 'description: Style.I18n.choose("Projektinformationen und Credits", "Project information and credits")' in SHELL
 assert 'selected: root.mainPage === "about"' in SHELL
 assert 'onClicked: root.openAbout()' in SHELL
 
@@ -21,7 +21,7 @@ assert 'root.navigateMainPage("about", 1)' in SHELL
 
 about = SHELL[SHELL.index("id: aboutPage"):SHELL.index("// Nexus StackPage equivalent")]
 assert 'root.displayedMainPage === "about"' in about
-assert 'title: "Über"' in about
+assert 'title: Style.I18n.choose("Über", "About")' in about
 assert "showBack: false" in about
 assert 'text: "Caelestia WebApps"' in about
 assert 'text: "v" + root.projectVersion' in about
