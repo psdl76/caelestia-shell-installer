@@ -282,6 +282,16 @@ ShellRoot {
             catalogData = parsed
             apps = parsed.apps || []
             categories = parsed.categories || []
+            if (root.actionMenuApp) {
+                const selectedId = root.actionMenuApp.id
+                const updatedApp = apps.find(function(app) { return app.id === selectedId }) || null
+                if (updatedApp)
+                    root.actionMenuApp = updatedApp
+                else if (root.actionMenuOpen) {
+                    root.actionMenuApp = null
+                    root.closeActionMenu()
+                }
+            }
             catalogReady = true
             catalogError = false
             statusText = apps.length + " WebApps geladen"
@@ -417,10 +427,16 @@ ShellRoot {
         if (!app)
             return []
         const entries = []
-        if (app.installed === true && app.applet?.available === true && app.applet?.support === "supported")
-            entries.push({ id: "applet-settings", group: "Integration", title: "Applet-Einstellungen", description: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", label: "Öffnen", danger: false })
+        if (app.installed === true)
+            entries.push({ id: "launch", group: "WebApp", title: root.appRunning(app.id) ? "WebApp fokussieren" : "WebApp öffnen", description: root.appRunning(app.id) ? "Zum bereits laufenden WebApp-Fenster wechseln." : "Die installierte WebApp in Firefox starten.", label: root.appRunning(app.id) ? "Fokussieren" : "Öffnen", primary: true, danger: false })
+        else
+            entries.push({ id: "install", group: "WebApp", title: "WebApp installieren", description: "Firefox-Profil, Desktop-Eintrag und verwaltete Integration einrichten.", label: "Installieren", primary: true, danger: false })
+        if (app.installed === true && app.applet?.available === true && app.applet?.support === "supported") {
+            entries.push({ id: "applet-toggle", type: "toggle", group: "Applet", title: "TopBar-Applet", description: "Diese WebApp als Applet in der Caelestia TopBar anzeigen.", danger: false })
+            entries.push({ id: "applet-settings", group: "Applet", title: "Applet-Einstellungen", description: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", label: "Öffnen", danger: false })
+        }
         if (app.installed === true) {
-            entries.push({ id: "setup", group: "Integration", title: "Firefox-Profil & Berechtigungen", description: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", label: "Einrichten", danger: false })
+            entries.push({ id: "setup", group: "Verwaltung", title: "Firefox-Profil & Berechtigungen", description: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", label: "Einrichten", danger: false })
             entries.push({ id: "repair", group: "Verwaltung", title: "WebApp reparieren", description: "Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen.", label: "Reparieren", danger: false })
         }
         if (app.source === "user")
@@ -446,15 +462,18 @@ ShellRoot {
         } else if (entry.id === "edit") {
             root.actionMenuOpen = false
             root.openEditWizard(app)
-        } else {
-            root.closeActionMenu()
-            if (entry.id === "remove")
-                root.requestUninstall(app)
-            else if (entry.id === "setup")
-                root.runAction("setup", app)
-            else if (entry.id === "repair")
-                root.runAction("repair", app)
-        }
+        } else if (entry.id === "applet-toggle")
+            root.toggleApplet(app)
+        else if (entry.id === "remove")
+            root.requestUninstall(app)
+        else if (entry.id === "launch")
+            root.runAction("launch", app)
+        else if (entry.id === "install")
+            root.runAction("install", app)
+        else if (entry.id === "setup")
+            root.runAction("setup", app)
+        else if (entry.id === "repair")
+            root.runAction("repair", app)
     }
 
     function openAppletSettings(app) {
@@ -1368,27 +1387,31 @@ ShellRoot {
 
                                         delegate: Rectangle {
                                             required property var modelData
+                                            required property int index
                                             Layout.fillWidth: true
-                                            implicitHeight: Style.Tokens.appRowHeight
-                                            radius: Style.Tokens.radiusLg
+                                            implicitHeight: 64
                                             color: Style.Theme.surfaceAlt
+                                            topLeftRadius: index === 0 ? Style.Tokens.radiusConnectedOuter : Style.Tokens.radiusConnectedInner
+                                            topRightRadius: topLeftRadius
+                                            bottomLeftRadius: index === root.visibleApps().length - 1 ? Style.Tokens.radiusConnectedOuter : Style.Tokens.radiusConnectedInner
+                                            bottomRightRadius: bottomLeftRadius
 
                                             RowLayout {
                                                 anchors.fill: parent
-                                                anchors.leftMargin: 12
-                                                anchors.rightMargin: 10
+                                                anchors.leftMargin: 16
+                                                anchors.rightMargin: 16
                                                 spacing: Style.Tokens.spaceLg
 
                                                 Rectangle {
-                                                    implicitWidth: Style.Tokens.appIconSurface
-                                                    implicitHeight: Style.Tokens.appIconSurface
-                                                    radius: width / 2
+                                                    implicitWidth: 42
+                                                    implicitHeight: 42
+                                                    radius: Style.Tokens.radiusSm
                                                     color: Style.Theme.sourceSurface
 
                                                     Image {
                                                         anchors.centerIn: parent
-                                                        width: Style.Tokens.appIconSize
-                                                        height: Style.Tokens.appIconSize
+                                                        width: 30
+                                                        height: 30
                                                         source: root.iconSource(modelData)
                                                         fillMode: Image.PreserveAspectFit
                                                         asynchronous: true
@@ -1397,46 +1420,15 @@ ShellRoot {
 
                                                 ColumnLayout {
                                                     Layout.fillWidth: true
-                                                    Layout.minimumWidth: 110
-                                                    spacing: Style.Tokens.spaceXxs
+                                                    spacing: 0
 
                                                     Text {
-                                                        id: appNameText
+                                                        Layout.fillWidth: true
                                                         text: modelData.name
                                                         color: Style.Theme.textPrimary
-                                                        font.pixelSize: Style.Tokens.fontSubtitle
-                                                        font.weight: Font.DemiBold
+                                                        font.pixelSize: Style.Tokens.fontBodyLarge
+                                                        font.weight: Font.Medium
                                                         elide: Text.ElideRight
-                                                        Layout.fillWidth: true
-                                                    }
-
-                                                    Rectangle {
-                                                        implicitWidth: sourceTypeContent.implicitWidth + 12
-                                                        implicitHeight: Style.Tokens.sourceIconSize
-                                                        radius: Style.Tokens.radiusSource
-                                                        color: Style.Theme.sourceSurface
-                                                        border.width: 1
-                                                        border.color: modelData.source === "user" ? Style.Theme.userSourceBorder : Style.Theme.catalogSourceBorder
-
-                                                        RowLayout {
-                                                            id: sourceTypeContent
-                                                            anchors.centerIn: parent
-                                                            spacing: Style.Tokens.spaceXxs
-
-                                                            Text {
-                                                                text: modelData.source === "user" ? "\ue7fd" : "\ue865"
-                                                                color: modelData.source === "user" ? Style.Theme.userSource : Style.Theme.textSecondary
-                                                                font.family: "Material Symbols Rounded"
-                                                                font.pixelSize: Style.Tokens.fontBodyLarge
-                                                                font.weight: Font.Medium
-                                                            }
-
-                                                            Text {
-                                                                text: modelData.source === "user" ? "Eigene App" : "Katalog-App"
-                                                                color: Style.Theme.textSecondary
-                                                                font.pixelSize: Style.Tokens.fontLabel
-                                                            }
-                                                        }
                                                     }
 
                                                     Text {
@@ -1458,50 +1450,17 @@ ShellRoot {
                                                     border.color: Style.Theme.runningBorder
                                                 }
 
-                                                RowLayout {
-                                                    visible: modelData.installed
-                                                    spacing: Style.Tokens.spaceXs
+                                                Text {
+                                                    text: "\ue5cc"
+                                                    color: Style.Theme.textSecondary
+                                                    font.family: "Material Symbols Rounded"
+                                                    font.pixelSize: 20
+                                                }
+                                            }
 
-                                                    Style.ActionButton {
-                                                        minimumWidth: root.appRunning(modelData.id) ? 108 : 86
-                                                        primary: true
-                                                        icon: root.appRunning(modelData.id) ? "\ue8a0" : "\ue89e"
-                                                        label: root.appRunning(modelData.id) ? "Fokussieren" : "Öffnen"
-                                                        interactive: !root.actionBusy
-                                                        onClicked: root.runAction("launch", modelData)
-                                                    }
-                                                    Style.ActionButton {
-                                                        visible: modelData.applet?.available === true && modelData.applet?.support === "supported"
-                                                        minimumWidth: 82
-                                                        label: root.appletEnabled(modelData.id) ? "Applet an" : "Applet aus"
-                                                        interactive: !root.actionBusy && root.appletStateAvailable
-                                                        onClicked: root.toggleApplet(modelData)
-                                                    }
-                                                    Style.ActionButton {
-                                                        minimumWidth: 88
-                                                        icon: "\ue5d3"
-                                                        label: "Aktionen"
-                                                        interactive: !root.actionBusy
-                                                        onClicked: root.openActionMenu(modelData)
-                                                    }
-                                                }
-                                                Style.ActionButton {
-                                                    visible: !modelData.installed && modelData.source === "user"
-                                                    minimumWidth: 88
-                                                    icon: "\ue5d3"
-                                                    label: "Aktionen"
-                                                    interactive: !root.actionBusy
-                                                    onClicked: root.openActionMenu(modelData)
-                                                }
-                                                Style.ActionButton {
-                                                    visible: !modelData.installed
-                                                    minimumWidth: 108
-                                                    primary: true
-                                                    icon: "\ue2c4"
-                                                    label: root.actionBusy && root.actionAppId === modelData.id ? "Bitte warten…" : "Installieren"
-                                                    interactive: !root.actionBusy
-                                                    onClicked: root.runAction("install", modelData)
-                                                }
+                                            Style.StateLayer {
+                                                disabled: root.actionBusy
+                                                onClicked: root.openActionMenu(modelData)
                                             }
                                         }
                                     }
@@ -1866,54 +1825,146 @@ ShellRoot {
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
+                        anchors.bottom: parent.bottom
                         anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
                         Style.PageHeader {
-                            title: root.actionMenuApp ? root.actionMenuApp.name : "WebApp"
-                            subtitle: "Weitere Aktionen und Einstellungen für diese WebApp"
+                            title: "WebApp-Info"
                             interactive: !root.actionBusy
                             onBack: root.closeActionMenu()
                         }
 
-                        ColumnLayout {
+                        Flickable {
                             Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceXs
+                            Layout.fillHeight: true
+                            clip: true
+                            contentHeight: actionDetailsColumn.implicitHeight
+                            boundsBehavior: Flickable.StopAtBounds
 
-                            Repeater {
-                                model: root.actionMenuEntries()
+                            ColumnLayout {
+                                id: actionDetailsColumn
+                                width: parent.width
+                                spacing: Style.Tokens.spaceXs
 
-                                delegate: ColumnLayout {
-                                    required property var modelData
-                                    required property int index
-                                    readonly property var entries: root.actionMenuEntries()
-                                    readonly property bool firstInSection: index === 0 || entries[index - 1].group !== modelData.group
-                                    readonly property bool lastInSection: index === entries.length - 1 || entries[index + 1].group !== modelData.group
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Layout.leftMargin: Style.Tokens.spaceLg
+                                    Layout.rightMargin: Style.Tokens.spaceLg
+                                    Layout.bottomMargin: Style.Tokens.spaceLg
+                                    spacing: Style.Tokens.spaceLg
 
+                                    Rectangle {
+                                        implicitWidth: 62
+                                        implicitHeight: 62
+                                        radius: Style.Tokens.radiusMd
+                                        color: Style.Theme.sourceSurface
+
+                                        Image {
+                                            anchors.fill: parent
+                                            anchors.margins: 8
+                                            source: root.actionMenuApp ? root.iconSource(root.actionMenuApp) : ""
+                                            fillMode: Image.PreserveAspectFit
+                                            asynchronous: true
+                                        }
+                                    }
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: Style.Tokens.spaceXxs
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: root.actionMenuApp ? root.actionMenuApp.name : ""
+                                            color: Style.Theme.textPrimary
+                                            font.pixelSize: Style.Tokens.fontTitle
+                                            font.weight: Font.Medium
+                                            wrapMode: Text.WordWrap
+                                        }
+
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: root.actionMenuApp ? (root.actionMenuApp.comment || root.actionMenuApp.genericName) : ""
+                                            color: Style.Theme.textSubtle
+                                            font.pixelSize: Style.Tokens.fontBodySmall
+                                            wrapMode: Text.WordWrap
+                                        }
+                                    }
+                                }
+
+                                Repeater {
+                                    model: root.actionMenuEntries()
+
+                                    delegate: ColumnLayout {
+                                        required property var modelData
+                                        required property int index
+                                        readonly property var entries: root.actionMenuEntries()
+                                        readonly property bool firstInSection: index === 0 || entries[index - 1].group !== modelData.group
+                                        readonly property bool lastInSection: index === entries.length - 1 || entries[index + 1].group !== modelData.group
+
+                                        Layout.fillWidth: true
+                                        spacing: Style.Tokens.spaceXs
+
+                                        Style.SectionHeader {
+                                            visible: parent.firstInSection
+                                            first: parent.index === 0
+                                            text: parent.modelData.group
+                                        }
+
+                                        Style.SettingsToggle {
+                                            visible: parent.modelData.type === "toggle"
+                                            title: parent.modelData.title
+                                            description: parent.modelData.description
+                                            checked: root.actionMenuApp ? root.appletEnabled(root.actionMenuApp.id) : false
+                                            interactive: !root.actionBusy && root.appletStateAvailable
+                                            firstInGroup: parent.firstInSection
+                                            lastInGroup: parent.lastInSection
+                                            onToggled: root.runActionMenuEntry(parent.modelData)
+                                        }
+
+                                        Style.SettingsAction {
+                                            visible: parent.modelData.type !== "toggle"
+                                            Layout.fillWidth: true
+                                            title: parent.modelData.title
+                                            description: parent.modelData.description
+                                            actionLabel: parent.modelData.label || ""
+                                            primary: parent.modelData.primary === true
+                                            danger: parent.modelData.danger === true
+                                            interactive: !root.actionBusy
+                                            firstInGroup: parent.firstInSection
+                                            lastInGroup: parent.lastInSection
+                                            onClicked: root.runActionMenuEntry(parent.modelData)
+                                        }
+                                    }
+                                }
+
+                                Style.SectionHeader { text: "Details" }
+
+                                ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: Style.Tokens.spaceXs
 
-                                    Style.SectionHeader {
-                                        visible: parent.firstInSection
-                                        first: parent.index === 0
-                                        text: parent.modelData.group
+                                    Style.SettingsInfoRow {
+                                        label: "Status"
+                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.installed ? (root.appRunning(root.actionMenuApp.id) ? "Installiert · läuft" : "Installiert") : "Nicht installiert")
+                                        firstInGroup: true
                                     }
-
-                                    Style.SettingsAction {
-                                        Layout.fillWidth: true
-                                        title: parent.modelData.title
-                                        description: parent.modelData.description
-                                        actionLabel: parent.modelData.label
-                                        danger: parent.modelData.danger === true
-                                        interactive: !root.actionBusy
-                                        firstInGroup: parent.firstInSection
-                                        lastInGroup: parent.lastInSection
-                                        onClicked: root.runActionMenuEntry(parent.modelData)
+                                    Style.SettingsInfoRow {
+                                        label: "Quelle"
+                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.source === "user" ? "Eigene App" : "Katalog-App")
+                                    }
+                                    Style.SettingsInfoRow {
+                                        label: "App-ID"
+                                        value: root.actionMenuApp ? root.actionMenuApp.id : ""
+                                    }
+                                    Style.SettingsInfoRow {
+                                        label: "Adresse"
+                                        value: root.actionMenuApp ? root.actionMenuApp.url : ""
+                                        lastInGroup: true
                                     }
                                 }
                             }
                         }
-
                     }
                 }
             }

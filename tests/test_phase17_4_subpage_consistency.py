@@ -23,7 +23,8 @@ for filename, typename in components.items():
 
 # All embedded subpages share one header component.
 assert SHELL.count("Style.PageHeader {") == 3
-assert 'subtitle: "Weitere Aktionen und Einstellungen für diese WebApp"' in SHELL
+assert 'title: "WebApp-Info"' in SHELL
+assert "id: actionDetailsColumn" in SHELL
 assert 'subtitle: "Verfügbare Funktionen des Caelestia-Applets"' in SHELL
 
 wizard = SHELL[SHELL.index("id: wizardPage"):SHELL.index("id: actionPage")]

@@ -8,18 +8,20 @@ assert 'property bool actionMenuOpen: false' in qml
 assert 'property var actionMenuApp: null' in qml
 assert 'function openActionMenu(app)' in qml
 assert 'function closeActionMenu()' in qml
-assert 'label: "Aktionen"' in qml
-assert 'icon: "\\ue5d3"' in qml
+assert 'title: "WebApp-Info"' in qml
+assert 'onClicked: root.openActionMenu(modelData)' in qml
+assert 'text: "\\ue5cc"' in qml
 assert "ToolTip" not in qml
 assert "tooltip:" not in qml
 
 # The dense installed-app toolbar must no longer expose the four secondary icon actions.
-installed_row = qml[qml.index('visible: modelData.installed'):qml.index('visible: !modelData.installed && modelData.source === "user"')]
+installed_row = qml[qml.index('model: root.visibleApps()'):qml.index('visible: root.catalogReady && root.visibleApps().length === 0')]
 assert 'tooltip: "Applet-Einstellungen"' not in installed_row
 assert 'tooltip: "Firefox-Profil einrichten / Berechtigungen"' not in installed_row
 assert 'tooltip: "WebApp reparieren"' not in installed_row
 assert 'tooltip: "WebApp deinstallieren"' not in installed_row
-assert 'label: "Aktionen"' in installed_row
+assert 'Style.ActionButton {' not in installed_row
+assert 'onClicked: root.openActionMenu(modelData)' in installed_row
 
 for label in [
     'Applet-Einstellungen',

@@ -31,7 +31,7 @@ manager = MANAGER.read_text(encoding='utf-8')
 assert 'Applet-Einstellungen' in manager
 assert 'applet-setting-set' in manager
 assert 'applet-settings' in manager
-assert 'modelData.applet?.support === "supported"' in manager
+assert 'app.applet?.support === "supported"' in manager
 
 names = {
     '_applet_settings_path', '_read_applet_settings_overrides',

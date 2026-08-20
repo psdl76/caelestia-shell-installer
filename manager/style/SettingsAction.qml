@@ -9,6 +9,7 @@ Rectangle {
     property string actionLabel: ""
     property bool firstInGroup: false
     property bool lastInGroup: false
+    property bool primary: false
     property bool danger: false
     property bool interactive: true
     signal clicked()
@@ -52,6 +53,7 @@ Rectangle {
             minimumWidth: 104
             label: root.actionLabel
             danger: root.danger
+            primary: root.primary
             interactive: root.interactive
             onClicked: root.clicked()
         }

@@ -43,7 +43,7 @@ assert "SectionHeader 1.0 SectionHeader.qml" in QMLDIR
 section_text = section.read_text(encoding="utf-8")
 assert "Theme.textSecondary" in section_text
 assert "Layout.leftMargin: Tokens.spaceLg" in section_text
-for group in ('group: "Integration"', 'group: "Verwaltung"', 'group: "Entfernen"'):
+for group in ('group: "WebApp"', 'group: "Applet"', 'group: "Verwaltung"', 'group: "Entfernen"'):
     assert group in SHELL
 assert "Style.SectionHeader {" in SHELL
 assert "firstInSection" in SHELL

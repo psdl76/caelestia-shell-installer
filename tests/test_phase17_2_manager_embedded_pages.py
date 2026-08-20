@@ -40,7 +40,8 @@ assert "function actionMenuEntries()" in SHELL
 assert "Style.SettingsAction {" in SHELL
 assert "ToolTip" not in SHELL
 assert "tooltip:" not in SHELL
-assert 'label: "Aktionen"' in SHELL
+assert 'title: "WebApp-Info"' in SHELL
+assert 'onClicked: root.openActionMenu(modelData)' in SHELL
 assert "color: Style.Theme.surfaceAlt" in SHELL
 
 # Destructive confirmation intentionally remains an overlay.

@@ -40,7 +40,8 @@ does not add a private Caelestia QML dependency.
 
 ## Grouping contract
 
-- More Actions is divided into Integration, Verwaltung and Entfernen sections.
+- WebApp details are divided into WebApp, Applet, Verwaltung and Entfernen
+  sections as applicable to the selected entry.
 - Each section has a subdued Nexus-style label above it.
 - Rows within one section use large outer and small inner connected corners.
 - Destructive confirmation remains the established modal overlay above page

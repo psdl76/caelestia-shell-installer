@@ -15,3 +15,4 @@ PageHeader 1.0 PageHeader.qml
 SettingsToggle 1.0 SettingsToggle.qml
 SettingsTextField 1.0 SettingsTextField.qml
 SettingsSelect 1.0 SettingsSelect.qml
+SettingsInfoRow 1.0 SettingsInfoRow.qml
