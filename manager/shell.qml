@@ -368,6 +368,46 @@ ShellRoot {
         root.mainPage = "catalog"
     }
 
+    function actionMenuEntries() {
+        const app = root.actionMenuApp
+        if (!app)
+            return []
+        const entries = []
+        if (app.installed === true && app.applet?.available === true && app.applet?.support === "supported")
+            entries.push({ id: "applet-settings", title: "Applet-Einstellungen", description: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", label: "Öffnen", danger: false })
+        if (app.installed === true) {
+            entries.push({ id: "setup", title: "Firefox-Profil & Berechtigungen", description: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", label: "Einrichten", danger: false })
+            entries.push({ id: "repair", title: "WebApp reparieren", description: "Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen.", label: "Reparieren", danger: false })
+        }
+        if (app.source === "user")
+            entries.push({ id: "edit", title: "Eigene WebApp bearbeiten", description: "Name, URL, Kategorie und Icon der eigenen WebApp ändern.", label: "Bearbeiten", danger: false })
+        entries.push({
+            id: "remove",
+            title: app.installed === true ? "WebApp deinstallieren" : "Aus dem Katalog entfernen",
+            description: app.installed === true ? "Die installierte WebApp nach einer Bestätigung entfernen." : "Diese eigene WebApp aus dem lokalen Katalog entfernen.",
+            label: app.installed === true ? "Deinstallieren" : "Entfernen",
+            danger: true
+        })
+        return entries
+    }
+
+    function runActionMenuEntry(entry) {
+        const app = root.actionMenuApp
+        if (!app || !entry)
+            return
+        root.closeActionMenu()
+        if (entry.id === "applet-settings")
+            root.openAppletSettings(app)
+        else if (entry.id === "edit")
+            root.openEditWizard(app)
+        else if (entry.id === "remove")
+            root.requestUninstall(app)
+        else if (entry.id === "setup")
+            root.runAction("setup", app)
+        else if (entry.id === "repair")
+            root.runAction("repair", app)
+    }
+
     function openAppletSettings(app) {
         root.appletSettingsApp = app
         root.appletSettingsItems = []
@@ -1251,11 +1291,6 @@ ShellRoot {
                                 onClicked: root.openCreateWizard()
                             }
 
-                            Style.IconButton {
-                                icon: "\ue5cd"
-                                tooltip: "Manager schließen"
-                                onClicked: Qt.quit()
-                            }
                         }
 
                         Item {
@@ -1480,6 +1515,13 @@ ShellRoot {
                 }
             }
 
+            Style.WindowCloseDock {
+                anchors.top: parent.top
+                anchors.right: parent.right
+                z: 100
+                onClicked: Qt.quit()
+            }
+
             Rectangle {
                 x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
                 y: 12
@@ -1536,16 +1578,11 @@ ShellRoot {
                             Text {
                                 Layout.fillWidth: true
                                 text: root.wizardEditing ? "WebApp bearbeiten" : "WebApp hinzufügen"
-                                color: Style.Theme.textPrimary
-                                font.pixelSize: Style.Tokens.fontTitleLarge
+                                color: Style.Theme.textPrimaryAlt
+                                font.pixelSize: Style.Tokens.fontDisplay
                                 font.weight: Font.DemiBold
                             }
 
-                            Style.IconButton {
-                                icon: "\ue5cd"
-                                tooltip: "Manager schließen"
-                                onClicked: Qt.quit()
-                            }
                         }
 
                         Text {
@@ -1838,8 +1875,8 @@ ShellRoot {
                                 Text {
                                     Layout.fillWidth: true
                                     text: root.actionMenuApp ? root.actionMenuApp.name : "WebApp"
-                                    color: Style.Theme.textPrimary
-                                    font.pixelSize: Style.Tokens.fontTitle
+                                    color: Style.Theme.textPrimaryAlt
+                                    font.pixelSize: Style.Tokens.fontDisplay
                                     font.weight: Font.DemiBold
                                     elide: Text.ElideRight
                                 }
@@ -1853,157 +1890,27 @@ ShellRoot {
                                 }
                             }
 
-                            Style.IconButton {
-                                icon: "\ue5cd"
-                                tooltip: "Manager schließen"
-                                onClicked: Qt.quit()
-                            }
                         }
 
-                        Rectangle {
-                            visible: root.actionMenuApp?.installed === true
-                                && root.actionMenuApp?.applet?.available === true
-                                && root.actionMenuApp?.applet?.support === "supported"
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            implicitHeight: 68
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: Style.Theme.fieldBorder
+                            spacing: Style.Tokens.spaceXs
 
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 14
-                                anchors.rightMargin: 12
-                                spacing: Style.Tokens.spaceMd
-                                ColumnLayout {
+                            Repeater {
+                                model: root.actionMenuEntries()
+
+                                delegate: Style.SettingsAction {
+                                    required property var modelData
+                                    required property int index
                                     Layout.fillWidth: true
-                                    spacing: 2
-                                    Text { text: "Applet-Einstellungen"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { Layout.fillWidth: true; text: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren."; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideRight }
-                                }
-                                Style.ActionButton {
-                                    minimumWidth: 104
-                                    label: "Öffnen"
+                                    title: modelData.title
+                                    description: modelData.description
+                                    actionLabel: modelData.label
+                                    danger: modelData.danger === true
                                     interactive: !root.actionBusy
-                                    onClicked: { const app = root.actionMenuApp; root.closeActionMenu(); root.openAppletSettings(app) }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            visible: root.actionMenuApp?.installed === true
-                            Layout.fillWidth: true
-                            implicitHeight: 68
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: Style.Theme.fieldBorder
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 14
-                                anchors.rightMargin: 12
-                                spacing: Style.Tokens.spaceMd
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-                                    Text { text: "Firefox-Profil & Berechtigungen"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { Layout.fillWidth: true; text: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten."; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideRight }
-                                }
-                                Style.ActionButton {
-                                    minimumWidth: 104
-                                    label: "Einrichten"
-                                    interactive: !root.actionBusy
-                                    onClicked: { const app = root.actionMenuApp; root.closeActionMenu(); root.runAction("setup", app) }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            visible: root.actionMenuApp?.installed === true
-                            Layout.fillWidth: true
-                            implicitHeight: 68
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: Style.Theme.fieldBorder
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 14
-                                anchors.rightMargin: 12
-                                spacing: Style.Tokens.spaceMd
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-                                    Text { text: "WebApp reparieren"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { Layout.fillWidth: true; text: "Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen."; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideRight }
-                                }
-                                Style.ActionButton {
-                                    minimumWidth: 104
-                                    label: "Reparieren"
-                                    interactive: !root.actionBusy
-                                    onClicked: { const app = root.actionMenuApp; root.closeActionMenu(); root.runAction("repair", app) }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            visible: root.actionMenuApp?.source === "user"
-                            Layout.fillWidth: true
-                            implicitHeight: 68
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: Style.Theme.fieldBorder
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 14
-                                anchors.rightMargin: 12
-                                spacing: Style.Tokens.spaceMd
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-                                    Text { text: "Eigene WebApp bearbeiten"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { Layout.fillWidth: true; text: "Name, URL, Kategorie und Icon der eigenen WebApp ändern."; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideRight }
-                                }
-                                Style.ActionButton {
-                                    minimumWidth: 104
-                                    label: "Bearbeiten"
-                                    interactive: !root.actionBusy
-                                    onClicked: { const app = root.actionMenuApp; root.closeActionMenu(); root.openEditWizard(app) }
-                                }
-                            }
-                        }
-
-                        Rectangle {
-                            visible: root.actionMenuApp !== null
-                            Layout.fillWidth: true
-                            implicitHeight: 68
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: Style.Theme.fieldBorder
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 14
-                                anchors.rightMargin: 12
-                                spacing: Style.Tokens.spaceMd
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-                                    Text { text: root.actionMenuApp?.installed === true ? "WebApp deinstallieren" : "Aus dem Katalog entfernen"; color: Style.Theme.error; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
-                                    Text { Layout.fillWidth: true; text: root.actionMenuApp?.installed === true ? "Die installierte WebApp entfernen; vor dem Löschen folgt eine Bestätigung." : "Diese eigene WebApp aus deinem lokalen Katalog entfernen."; color: Style.Theme.textMuted; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideRight }
-                                }
-                                Style.ActionButton {
-                                    minimumWidth: 104
-                                    label: root.actionMenuApp?.installed === true ? "Deinstallieren" : "Entfernen"
-                                    danger: true
-                                    interactive: !root.actionBusy
-                                    onClicked: { const app = root.actionMenuApp; root.closeActionMenu(); root.requestUninstall(app) }
+                                    firstInGroup: index === 0
+                                    lastInGroup: index === root.actionMenuEntries().length - 1
+                                    onClicked: root.runActionMenuEntry(modelData)
                                 }
                             }
                         }
@@ -2068,17 +1975,12 @@ ShellRoot {
                             Text {
                                 Layout.fillWidth: true
                                 text: !root.appletSettingsApp ? "Applet-Einstellungen" : root.appletSettingsApp.name + " · Applet"
-                                color: Style.Theme.textPrimary
-                                font.pixelSize: Style.Tokens.fontTitle
+                                color: Style.Theme.textPrimaryAlt
+                                font.pixelSize: Style.Tokens.fontDisplay
                                 font.weight: Font.DemiBold
                                 elide: Text.ElideRight
                             }
 
-                            Style.IconButton {
-                                icon: "\ue5cd"
-                                tooltip: "Manager schließen"
-                                onClicked: Qt.quit()
-                            }
                         }
 
                         Text {

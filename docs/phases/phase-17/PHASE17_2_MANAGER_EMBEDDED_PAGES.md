@@ -23,6 +23,18 @@ visually unrelated dialog above the Manager.
 - Category and icon choices in the WebApp editor wrap responsively instead of
   widening the page beyond the available main surface.
 
+## Nexus settings visual grammar
+
+- Window close is a single global control in a project-owned connected surface
+  dock at the top-right window edge. It is not repeated as a circular button in
+  page headers.
+- Detail-page headers contain the tonal back action, a large page title and no
+  independent close capsule.
+- More Actions uses one connected `surfaceContainer`-style group: large outer
+  corners, small inner corners, compact gaps and no card outlines.
+- Action rows share the main page's typography, spacing and semantic colours;
+  destructive actions change emphasis without becoming a different layout.
+
 ## Modal boundary
 
 Destructive confirmation remains modal. In particular, uninstall and local

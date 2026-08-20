@@ -3,6 +3,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SHELL = (ROOT / "manager/shell.qml").read_text(encoding="utf-8")
+STYLE = ROOT / "manager/style"
+QMLDIR = (STYLE / "qmldir").read_text(encoding="utf-8")
 DOC = ROOT / "docs/phases/phase-17/PHASE17_2_MANAGER_EMBEDDED_PAGES.md"
 
 assert 'property string mainPage: "catalog"' in SHELL
@@ -18,6 +20,23 @@ assert SHELL.count("Behavior on opacity { Style.EffectAnimation {} }") >= 3
 assert SHELL.count("Behavior on x { Style.SpatialAnimation {} }") >= 3
 assert SHELL.count('tooltip: "Zurück"') >= 3
 assert SHELL.count("Flow {") >= 2
+
+for name in ("WindowCloseDock.qml", "SettingsAction.qml"):
+    path = STYLE / name
+    assert path.is_file(), name
+    assert f"{name.removesuffix('.qml')} 1.0 {name}" in QMLDIR
+
+close_dock = (STYLE / "WindowCloseDock.qml").read_text(encoding="utf-8")
+settings_action = (STYLE / "SettingsAction.qml").read_text(encoding="utf-8")
+assert "Style.WindowCloseDock {" in SHELL
+assert "ShapePath {" in close_dock
+assert 'fillColor: Theme.mainSurface' in close_dock
+assert "Theme.surfaceAlt" in settings_action
+assert "topLeftRadius: firstInGroup" in settings_action
+assert "bottomLeftRadius: lastInGroup" in settings_action
+assert "function actionMenuEntries()" in SHELL
+assert "Style.SettingsAction {" in SHELL
+assert 'tooltip: "Manager schließen"' not in SHELL
 
 # Destructive confirmation intentionally remains an overlay.
 assert "visible: root.pendingUninstallApp !== null" in SHELL

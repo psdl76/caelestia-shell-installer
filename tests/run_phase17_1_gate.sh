@@ -20,6 +20,8 @@ qmllint -I "$ROOT/manager" \
   "$ROOT/manager/style/StateLayer.qml" \
   "$ROOT/manager/style/NavigationItem.qml" \
   "$ROOT/manager/style/SpatialAnimation.qml" \
-  "$ROOT/manager/style/EffectAnimation.qml"
+  "$ROOT/manager/style/EffectAnimation.qml" \
+  "$ROOT/manager/style/WindowCloseDock.qml" \
+  "$ROOT/manager/style/SettingsAction.qml"
 
 echo "PASS: Phase 17.1 Manager Nexus layout gate"
