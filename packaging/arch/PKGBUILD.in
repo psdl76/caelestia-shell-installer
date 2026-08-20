@@ -6,7 +6,7 @@ pkgdesc="Firefox-based WebApp manager for Hyprland and Caelestia"
 arch=('any')
 url="https://github.com/psdl76/caelestia-shell-installer"
 license=('GPL-3.0-only')
-depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell')
+depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell' 'hicolor-icon-theme')
 optdepends=(
   'desktop-file-utils: refresh desktop application database'
   'gtk-update-icon-cache: refresh hicolor icon cache for installed WebApp icons'

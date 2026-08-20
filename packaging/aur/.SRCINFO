@@ -10,9 +10,10 @@ pkgbase = caelestia-webapps
 	depends = firefox
 	depends = hyprland
 	depends = quickshell
+	depends = hicolor-icon-theme
 	optdepends = desktop-file-utils: refresh the desktop application database
 	optdepends = gtk-update-icon-cache: refresh the hicolor icon cache for installed WebApps
 	source = caelestia-webapps-0.4.2.tar.gz::https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.2/caelestia-webapps-0.4.2.tar.gz
-	sha256sums = 57a58806c7d4cfd2d7b43f82a389af364edcdfb7c03a971d9126db6edec643b2
+	sha256sums = 66c6dfa140dde3250362225454ac8c7feca87c17b6302ac3f64ef98babb6f27f
 
 pkgname = caelestia-webapps

@@ -6,13 +6,13 @@ pkgdesc="Unofficial Firefox WebApp manager for Hyprland and Caelestia-style desk
 arch=('any')
 url="https://github.com/psdl76/caelestia-shell-installer"
 license=('GPL-3.0-only')
-depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell')
+depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell' 'hicolor-icon-theme')
 optdepends=(
   'desktop-file-utils: refresh the desktop application database'
   'gtk-update-icon-cache: refresh the hicolor icon cache for installed WebApps'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('57a58806c7d4cfd2d7b43f82a389af364edcdfb7c03a971d9126db6edec643b2')
+sha256sums=('66c6dfa140dde3250362225454ac8c7feca87c17b6302ac3f64ef98babb6f27f')
 
 package() {
   local src="$srcdir/$pkgname-$pkgver"
