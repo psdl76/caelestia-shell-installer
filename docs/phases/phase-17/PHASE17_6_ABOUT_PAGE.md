@@ -1,6 +1,6 @@
 # Phase 17.6 — About Page
 
-Status: **IMPLEMENTATION CANDIDATE**
+Status: **ACCEPTED / FROZEN**
 
 ## Goal
 

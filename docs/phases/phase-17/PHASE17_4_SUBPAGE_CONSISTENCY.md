@@ -1,6 +1,6 @@
 # Phase 17.4 — Manager Subpage Consistency
 
-Status: **IMPLEMENTATION CANDIDATE**
+Status: **ACCEPTED / FROZEN**
 
 ## Goal
 

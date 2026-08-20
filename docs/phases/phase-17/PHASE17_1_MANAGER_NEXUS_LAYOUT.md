@@ -1,6 +1,6 @@
 # Phase 17.1 — Manager Caelestia Nexus Layout
 
-Status: **IMPLEMENTATION CANDIDATE**
+Status: **ACCEPTED / FROZEN**
 
 ## Goal
 

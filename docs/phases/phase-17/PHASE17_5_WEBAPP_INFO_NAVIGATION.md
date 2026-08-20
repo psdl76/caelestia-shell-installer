@@ -1,6 +1,6 @@
 # Phase 17.5 — WebApp Info Navigation
 
-Status: **IMPLEMENTATION CANDIDATE**
+Status: **ACCEPTED / FROZEN**
 
 ## Goal
 

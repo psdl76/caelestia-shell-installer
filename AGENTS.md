@@ -25,18 +25,19 @@ The baseline represented by this workspace is:
 - Phase 16.6 — capability settings: functionally accepted; UI baseline intentionally reset to `phase16-6-fix1-manager-more-actions`
 - Phase 16.7 — repair/upgrade/migration: LIVE ACCEPTED / FROZEN
 - Phase 16.8 — end-to-end closing gate: ACCEPTED / FROZEN
-- Phase 17.1 — Manager Caelestia Nexus layout: IMPLEMENTATION CANDIDATE / WIP
-- Phase 17.2 — embedded animated Manager detail pages: IMPLEMENTATION CANDIDATE / WIP
-- Phase 17.3 — Nexus motion and connected action grouping: IMPLEMENTATION CANDIDATE / WIP
-- Phase 17.4 — consistent Nexus Manager subpages: IMPLEMENTATION CANDIDATE / WIP
-- Phase 17.5 — Nexus AllApps/WebApp-Info navigation: IMPLEMENTATION CANDIDATE / WIP
-- Phase 17.6 — Nexus-style About page: IMPLEMENTATION CANDIDATE / WIP
+- Phase 17.1 — Manager Caelestia Nexus layout: LIVE ACCEPTED / FROZEN
+- Phase 17.2 — embedded animated Manager detail pages: LIVE ACCEPTED / FROZEN
+- Phase 17.3 — Nexus motion and connected action grouping: LIVE ACCEPTED / FROZEN
+- Phase 17.4 — consistent Nexus Manager subpages: LIVE ACCEPTED / FROZEN
+- Phase 17.5 — Nexus AllApps/WebApp-Info navigation: LIVE ACCEPTED / FROZEN
+- Phase 17.6 — Nexus-style About page: LIVE ACCEPTED / FROZEN
+- Phase 17.7 — Manager visual acceptance and closing gate: ACCEPTED / FROZEN
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
 ## Critical UI baseline rule
 
-The frozen Phase-16 Manager UI baseline is **Phase 16.6 fix1 — Manager More Actions**.
+The frozen Manager UI baseline is **Phase 17.7 — Manager visual acceptance and closing gate**.
 
 Phase 17 explicitly supersedes its top-level toolbar/catalog layout with a
 Caelestia-Nexus-inspired sidebar and main screen. The Phase 16 More Actions
@@ -44,7 +45,8 @@ boundary and all CLI/runtime behavior remain frozen.
 
 Do not reintroduce the abandoned UI experiments from later Phase 16.6 fixes (surface-alignment / unified-design / connected-row / motion-controls / select-popouts / SplitButton experiments). Phase 17 is a new visual contract based specifically on the live Caelestia Nexus settings UI, not a revival of those patches.
 
-The current task for Phase 16.8 is integration verification, not UI redesign.
+Do not reopen the Phase 17 visual baseline without a reproducible live UI bug or
+a failing regression contract.
 
 ## Architecture rules
 
@@ -118,6 +120,7 @@ bash tests/test_phase16_8_uninstall_applet_reset.sh
 bash tests/test_phase16_8_installed_upgrade_migration.sh
 bash tests/test_shell_syntax.sh
 bash tests/run_phase13_gate.sh
+bash tests/run_phase17_7_closing_gate.sh
 ```
 
 Some tests require an isolated HOME/XDG environment. If a test unexpectedly touches the developer's real environment, stop and inspect the test setup instead of adapting product behavior to the host machine.
@@ -173,4 +176,7 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phase 16.8 End-to-End is accepted and frozen.** The active goal is Phase 17 Manager visual alignment, currently Phase 17.2 embedded detail-page navigation. Preserve the proven packaged lifecycle and keep private Caelestia QML dependencies out of the standalone Manager.
+**Phases 16.8 and 17.7 are accepted and frozen.** The next product step is
+release 0.4.0 preparation. Preserve the proven packaged lifecycle, the accepted
+Nexus-style Manager baseline and the standalone boundary from private Caelestia
+QML dependencies.

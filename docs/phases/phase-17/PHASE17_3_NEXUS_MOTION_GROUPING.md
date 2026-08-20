@@ -1,6 +1,6 @@
 # Phase 17.3 — Nexus Motion and Grouping
 
-Status: **IMPLEMENTATION CANDIDATE**
+Status: **ACCEPTED / FROZEN**
 
 ## Goal
 

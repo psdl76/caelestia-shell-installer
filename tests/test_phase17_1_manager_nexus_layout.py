@@ -42,7 +42,7 @@ assert SHELL.index("id: managerSearch") < SHELL.index("id: contentPane")
 
 assert DOC.is_file()
 doc = DOC.read_text(encoding="utf-8")
-assert "IMPLEMENTATION CANDIDATE" in doc
+assert "ACCEPTED / FROZEN" in doc
 assert "does not import `qs.*`" in doc
 
 print("PASS: Phase17.1 Manager uses project-owned Caelestia Nexus navigation and motion primitives")

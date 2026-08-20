@@ -30,6 +30,8 @@ The later abandoned Phase 16.6 UI experiments are intentionally not part of this
 6. `phases/phase-17/PHASE17_4_SUBPAGE_CONSISTENCY.md`
 7. `phases/phase-17/PHASE17_5_WEBAPP_INFO_NAVIGATION.md`
 8. `phases/phase-17/PHASE17_6_ABOUT_PAGE.md`
+9. `phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
 
 Phase 17 changes only the Manager's visual/layout contract. Phase 16.8 remains
-the frozen backend, runtime and packaged-lifecycle baseline.
+the frozen backend, runtime and packaged-lifecycle baseline. Phase 17.7 is the
+accepted and frozen Manager baseline.

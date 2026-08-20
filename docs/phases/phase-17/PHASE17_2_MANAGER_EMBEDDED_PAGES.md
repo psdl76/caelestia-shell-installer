@@ -1,6 +1,6 @@
 # Phase 17.2 — Manager Embedded Detail Pages
 
-Status: **IMPLEMENTATION CANDIDATE**
+Status: **ACCEPTED / FROZEN**
 
 ## Goal
 

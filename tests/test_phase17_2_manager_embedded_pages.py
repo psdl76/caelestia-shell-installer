@@ -50,7 +50,7 @@ assert "color: Style.Theme.scrimSoft" in SHELL
 
 assert DOC.is_file()
 doc = DOC.read_text(encoding="utf-8")
-assert "IMPLEMENTATION CANDIDATE" in doc
+assert "ACCEPTED / FROZEN" in doc
 assert "Destructive confirmation remains modal" in doc
 assert "private Caelestia QML dependency" in doc
 
