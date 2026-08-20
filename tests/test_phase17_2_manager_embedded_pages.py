@@ -17,16 +17,18 @@ for page in ("wizard", "actions", "applet-settings"):
 
 assert "id: mainPageSwitch" in SHELL
 assert "SequentialAnimation {" in SHELL
-assert SHELL.count('icon: "\\ue5c4"') >= 3
-assert SHELL.count("Flow {") >= 2
+assert SHELL.count("Style.PageHeader {") >= 3
+assert SHELL.count("Style.SettingsSelect {") >= 2
 
-for name in ("WindowCloseDock.qml", "SettingsAction.qml"):
+for name in ("WindowCloseDock.qml", "SettingsAction.qml", "PageHeader.qml"):
     path = STYLE / name
     assert path.is_file(), name
     assert f"{name.removesuffix('.qml')} 1.0 {name}" in QMLDIR
 
 close_dock = (STYLE / "WindowCloseDock.qml").read_text(encoding="utf-8")
 settings_action = (STYLE / "SettingsAction.qml").read_text(encoding="utf-8")
+page_header = (STYLE / "PageHeader.qml").read_text(encoding="utf-8")
+assert 'icon: "\\ue5c4"' in page_header
 assert "Style.WindowCloseDock {" in SHELL
 assert "ShapePath {" in close_dock
 assert 'fillColor: Theme.mainSurface' in close_dock

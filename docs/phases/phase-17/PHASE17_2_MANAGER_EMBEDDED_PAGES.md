@@ -20,8 +20,8 @@ visually unrelated dialog above the Manager.
 - Closing an edit flow or applet settings returns to the originating More
   Actions page.
 - Choosing a catalog category returns directly to the catalog page.
-- Category and icon choices in the WebApp editor wrap responsively instead of
-  widening the page beyond the available main surface.
+- Category and icon choices in the WebApp editor use styled select popouts
+  constrained to the available main surface.
 
 ## Nexus settings visual grammar
 
@@ -30,7 +30,7 @@ visually unrelated dialog above the Manager.
   page headers.
 - Detail-page headers contain the tonal back action, a large page title and no
   independent close capsule.
-- More Actions uses one connected `surfaceContainer`-style group: large outer
+- More Actions uses connected `surfaceContainer`-style groups: large outer
   corners, small inner corners, compact gaps and no card outlines.
 - Action rows share the main page's typography, spacing and semantic colours;
   destructive actions change emphasis without becoming a different layout.

@@ -11,3 +11,7 @@ EffectAnimation 1.0 EffectAnimation.qml
 WindowCloseDock 1.0 WindowCloseDock.qml
 SettingsAction 1.0 SettingsAction.qml
 SectionHeader 1.0 SectionHeader.qml
+PageHeader 1.0 PageHeader.qml
+SettingsToggle 1.0 SettingsToggle.qml
+SettingsTextField 1.0 SettingsTextField.qml
+SettingsSelect 1.0 SettingsSelect.qml

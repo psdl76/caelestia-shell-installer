@@ -6,17 +6,17 @@ ICON="$ROOT/manager/style/IconButton.qml"
 API="$ROOT/bin/caelestia-webapps"
 
 # Material destructive icon now lives as a reusable IconButton property.
-grep -Fq 'icon: "\ue872"' "$QML"
+grep -Fq '"\ue872"' "$QML"
 grep -Fq 'font.family: "Material Symbols Rounded"' "$ICON"
-grep -Fq 'text: "Aus dem Katalog entfernen"' "$QML"
+grep -Fq 'title: "Aus dem Katalog entfernen"' "$QML"
 grep -Fq '? "Schließen & deinstallieren"' "$QML"
 grep -Fq 'root.runAction(root.appRunning(app.id) ? "uninstall-close" : "uninstall", app)' "$QML"
 
 # Wizard keyboard flow remains intact; Escape is now also globally hardened.
-grep -Fq 'KeyNavigation.tab: wizardId' "$QML"
-grep -Fq 'KeyNavigation.tab: wizardUrl' "$QML"
-grep -Fq 'KeyNavigation.tab: root.wizardIconMode === "url" ? wizardIcon : wizardSaveButton' "$QML"
-grep -Fq 'KeyNavigation.tab: wizardSaveButton' "$QML"
+grep -Fq 'field.KeyNavigation.tab: wizardId.field' "$QML"
+grep -Fq 'field.KeyNavigation.tab: wizardUrl.field' "$QML"
+grep -Fq 'field.KeyNavigation.tab: root.wizardIconMode === "url" ? wizardIcon.field : wizardSaveButton' "$QML"
+grep -Fq 'field.KeyNavigation.tab: wizardSaveButton' "$QML"
 grep -Fq 'onActivated: root.closeWizard()' "$QML"
 grep -Fq 'id: wizardSaveButton' "$QML"
 

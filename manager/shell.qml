@@ -950,7 +950,7 @@ ShellRoot {
         id: wizardFocusTimer
         interval: 0
         repeat: false
-        onTriggered: wizardName.forceActiveFocus()
+        onTriggered: wizardName.field.forceActiveFocus()
     }
 
     Timer {
@@ -1639,221 +1639,159 @@ ShellRoot {
                         anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceLg
-
-                            Style.IconButton {
-                                icon: "\ue5c4"
-                                interactive: !root.actionBusy
-                                onClicked: root.closeWizard()
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: root.wizardEditing ? "WebApp bearbeiten" : "WebApp hinzufügen"
-                                color: Style.Theme.textPrimaryAlt
-                                font.pixelSize: Style.Tokens.fontDisplay
-                                font.weight: Font.DemiBold
-                            }
-
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: root.wizardEditing
+                        Style.PageHeader {
+                            title: root.wizardEditing ? "WebApp bearbeiten" : "WebApp hinzufügen"
+                            subtitle: root.wizardEditing
                                 ? "Die App-ID bleibt unverändert. Änderungen werden als User-Definition gespeichert."
                                 : "Eigene Apps werden getrennt unter ~/.config/caelestia-webapps/apps gespeichert."
-                            wrapMode: Text.WordWrap
-                            color: Style.Theme.labelMuted
-                            font.pixelSize: Style.Tokens.fontBodySmall
+                            interactive: !root.actionBusy
+                            onBack: root.closeWizard()
                         }
 
-                        Text { text: "Name"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
-                        Rectangle {
+                        Style.SectionHeader { first: true; text: "WebApp" }
+
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            implicitHeight: Style.Tokens.fieldHeight
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: wizardName.activeFocus ? Style.Theme.focus : Style.Theme.fieldBorder
-                            TextInput {
-                                id: wizardName
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                verticalAlignment: TextInput.AlignVCenter
-                                text: root.wizardName
-                                color: Style.Theme.textPrimary
-                                selectByMouse: true
-                                activeFocusOnTab: true
-                                KeyNavigation.tab: wizardId
-                                KeyNavigation.backtab: wizardSaveButton
-                                Keys.onEscapePressed: root.closeWizard()
-                                onTextEdited: {
-                                    root.wizardName = text
-                                    if (!root.wizardEditing && root.wizardId.length === 0)
-                                        root.wizardId = root.slugify(text)
-                                }
+                            spacing: Style.Tokens.spaceXs
+
+                            Style.SettingsTextField {
+                            id: wizardName
+                            label: "Name"
+                            description: "Anzeigename der WebApp"
+                            value: root.wizardName
+                            firstInGroup: true
+                            field.KeyNavigation.tab: wizardId.field
+                            field.KeyNavigation.backtab: wizardSaveButton
+                            field.Keys.onEscapePressed: root.closeWizard()
+                            onValueEdited: function(value) {
+                                root.wizardName = value
+                                if (!root.wizardEditing && root.wizardId.length === 0)
+                                    root.wizardId = root.slugify(value)
+                            }
+                            }
+
+                            Style.SettingsTextField {
+                            id: wizardId
+                            label: "App-ID"
+                            description: root.wizardEditing ? "Die App-ID bleibt beim Bearbeiten unverändert" : "Eindeutige technische Kennung"
+                            value: root.wizardId
+                            readOnly: root.wizardEditing
+                            field.KeyNavigation.tab: wizardUrl.field
+                            field.KeyNavigation.backtab: wizardName.field
+                            field.Keys.onEscapePressed: root.closeWizard()
+                            onValueEdited: function(value) { root.wizardId = value.toLowerCase() }
+                            onEditingFinished: root.wizardAutoIconId = root.wizardId.trim()
+                            }
+
+                            Style.SettingsTextField {
+                            id: wizardUrl
+                            label: "URL"
+                            description: "Vollständige http(s)-Adresse"
+                            value: root.wizardUrl
+                            lastInGroup: true
+                            field.KeyNavigation.tab: root.wizardIconMode === "url" ? wizardIcon.field : wizardSaveButton
+                            field.KeyNavigation.backtab: wizardId.field
+                            field.Keys.onEscapePressed: root.closeWizard()
+                            onValueEdited: function(value) { root.wizardUrl = value }
                             }
                         }
 
-                        Text { text: "App-ID"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
-                        Rectangle {
+                        Style.SectionHeader { text: "Darstellung" }
+
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            implicitHeight: Style.Tokens.fieldHeight
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: wizardId.activeFocus ? Style.Theme.focus : Style.Theme.fieldBorder
-                            opacity: root.wizardEditing ? 0.55 : 1
-                            TextInput {
-                                id: wizardId
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                verticalAlignment: TextInput.AlignVCenter
-                                text: root.wizardId
-                                readOnly: root.wizardEditing
-                                color: Style.Theme.textPrimary
-                                selectByMouse: true
-                                activeFocusOnTab: true
-                                KeyNavigation.tab: wizardUrl
-                                KeyNavigation.backtab: wizardName
-                                Keys.onEscapePressed: root.closeWizard()
-                                onTextEdited: root.wizardId = text.toLowerCase()
-                                onEditingFinished: root.wizardAutoIconId = root.wizardId.trim()
+                            spacing: Style.Tokens.spaceXs
+
+                            Style.SettingsSelect {
+                            label: "Kategorie"
+                            description: "Gruppe im WebApp-Katalog"
+                            options: root.categories
+                            value: root.wizardCategory
+                            firstInGroup: true
+                            onSelected: function(value) { root.wizardCategory = value }
                             }
-                        }
 
-                        Text { text: "URL"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
-                        Rectangle {
-                            Layout.fillWidth: true
-                            implicitHeight: Style.Tokens.fieldHeight
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: wizardUrl.activeFocus ? Style.Theme.focus : Style.Theme.fieldBorder
-                            TextInput {
-                                id: wizardUrl
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                verticalAlignment: TextInput.AlignVCenter
-                                text: root.wizardUrl
-                                color: Style.Theme.textPrimary
-                                selectByMouse: true
-                                activeFocusOnTab: true
-                                KeyNavigation.tab: root.wizardIconMode === "url" ? wizardIcon : wizardSaveButton
-                                KeyNavigation.backtab: wizardId
-                                Keys.onEscapePressed: root.closeWizard()
-                                onTextEdited: root.wizardUrl = text
+                            Style.SettingsSelect {
+                            label: "Icon-Quelle"
+                            description: root.wizardIconMode === "auto"
+                                ? "Passendes Dashboard-Icon automatisch verwenden"
+                                : (root.wizardIconMode === "url" ? "Icon über eine URL laden" : "Lokale SVG- oder PNG-Datei verwenden")
+                            options: [{ id: "auto", label: "Automatisch" }, { id: "url", label: "URL" }, { id: "local", label: "Lokale Datei" }]
+                            value: root.wizardIconMode
+                            lastInGroup: root.wizardIconMode === "auto"
+                            onSelected: function(value) {
+                                root.wizardIconMode = value
+                                if (value === "auto")
+                                    root.wizardAutoIconId = root.wizardId.trim()
                             }
-                        }
-
-                        Text { text: "Kategorie"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceSm
-                            Repeater {
-                                model: root.categories
-                                delegate: Rectangle {
-                                    required property var modelData
-                                    implicitWidth: catText.implicitWidth + 24
-                                    implicitHeight: Style.Tokens.controlHeightCompact
-                                    radius: Style.Tokens.radiusControl
-                                    color: root.wizardCategory === modelData.id ? Style.Theme.primary : Style.Theme.controlSurface
-                                    Text {
-                                        id: catText
-                                        anchors.centerIn: parent
-                                        text: modelData.label
-                                        color: root.wizardCategory === modelData.id ? Style.Theme.primaryContent : Style.Theme.controlText
-                                        font.pixelSize: Style.Tokens.fontLabel
-                                    }
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.wizardCategory = modelData.id
-                                    }
-                                }
                             }
-                        }
 
-                        Text { text: "Icon"; color: Style.Theme.textSecondary; font.pixelSize: Style.Tokens.fontBodySmall }
-
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceSm
-                            Repeater {
-                                model: [{ id: "auto", label: "Automatisch" }, { id: "url", label: "URL" }, { id: "local", label: "Lokale Datei" }]
-                                delegate: Rectangle {
-                                    required property var modelData
-                                    implicitWidth: iconModeText.implicitWidth + 24
-                                    implicitHeight: Style.Tokens.controlHeightCompact
-                                    radius: Style.Tokens.radiusControl
-                                    color: root.wizardIconMode === modelData.id ? Style.Theme.primary : Style.Theme.controlSurface
-                                    Text { id: iconModeText; anchors.centerIn: parent; text: modelData.label; color: root.wizardIconMode === modelData.id ? Style.Theme.primaryContent : Style.Theme.controlText; font.pixelSize: Style.Tokens.fontLabel }
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            root.wizardIconMode = modelData.id
-                                            if (modelData.id === "auto")
-                                                root.wizardAutoIconId = root.wizardId.trim()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Text { visible: root.wizardIconMode === "auto"; Layout.fillWidth: true; text: "Automatisch verwendet die Dashboard-Icons-Adresse passend zur App-ID."; wrapMode: Text.WordWrap; color: Style.Theme.hint; font.pixelSize: Style.Tokens.fontLabel }
-
-                        Rectangle {
+                            Style.SettingsTextField {
+                            id: wizardIcon
                             visible: root.wizardIconMode === "url"
-                            Layout.fillWidth: true
-                            implicitHeight: Style.Tokens.fieldHeight
-                            radius: Style.Tokens.radiusMd
-                            color: Style.Theme.surfaceLow
-                            border.width: 1
-                            border.color: wizardIcon.activeFocus ? Style.Theme.focus : Style.Theme.fieldBorder
-                            TextInput {
-                                id: wizardIcon
-                                anchors.fill: parent
-                                anchors.margins: 10
-                                verticalAlignment: TextInput.AlignVCenter
-                                text: root.wizardIconUrl
-                                color: Style.Theme.textPrimary
-                                selectByMouse: true
-                                activeFocusOnTab: true
-                                KeyNavigation.tab: wizardSaveButton
-                                KeyNavigation.backtab: wizardUrl
-                                Keys.onEscapePressed: root.closeWizard()
-                                onTextEdited: root.wizardIconUrl = text
+                            label: "Icon-URL"
+                            description: "Direkte Adresse zu einer SVG- oder PNG-Datei"
+                            value: root.wizardIconUrl
+                            lastInGroup: true
+                            field.KeyNavigation.tab: wizardSaveButton
+                            field.KeyNavigation.backtab: wizardUrl.field
+                            field.Keys.onEscapePressed: root.closeWizard()
+                            onValueEdited: function(value) { root.wizardIconUrl = value }
                             }
-                        }
 
-                        RowLayout {
+                            Rectangle {
                             visible: root.wizardIconMode === "local"
                             Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceMd
-                            Rectangle {
-                                Layout.fillWidth: true; implicitHeight: Style.Tokens.fieldHeight; radius: Style.Tokens.radiusMd; color: Style.Theme.surfaceLow; border.width: 1; border.color: Style.Theme.fieldBorder
-                                Text { anchors.fill: parent; anchors.margins: 10; verticalAlignment: Text.AlignVCenter; elide: Text.ElideMiddle; text: root.wizardIconFile.length > 0 ? root.wizardIconFile : "Keine Datei ausgewählt"; color: root.wizardIconFile.length > 0 ? Style.Theme.controlText : Style.Theme.textDisabled; font.pixelSize: Style.Tokens.fontLabel }
+                            implicitHeight: 64
+                            color: Style.Theme.surfaceAlt
+                            topLeftRadius: Style.Tokens.radiusConnectedInner
+                            topRightRadius: topLeftRadius
+                            bottomLeftRadius: Style.Tokens.radiusConnectedOuter
+                            bottomRightRadius: bottomLeftRadius
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                anchors.rightMargin: 12
+                                spacing: Style.Tokens.spaceLg
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+                                    Text { text: "Lokale Icon-Datei"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
+                                    Text { Layout.fillWidth: true; text: root.wizardIconFile.length > 0 ? root.wizardIconFile : "Keine Datei ausgewählt"; color: Style.Theme.textSubtle; font.pixelSize: Style.Tokens.fontBodySmall; elide: Text.ElideMiddle }
+                                }
+                                Style.ActionButton { label: "Auswählen"; interactive: !root.actionBusy; onClicked: iconFileDialog.open() }
                             }
-                            Rectangle {
-                                implicitWidth: 98; implicitHeight: Style.Tokens.fieldHeight; radius: Style.Tokens.radiusControl; color: iconPickHover.hovered ? Style.Theme.pickerHover : Style.Theme.controlSurface
-                                HoverHandler { id: iconPickHover }
-                                Text { anchors.centerIn: parent; text: "Auswählen…"; color: Style.Theme.pickerText; font.pixelSize: Style.Tokens.fontLabel }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: iconFileDialog.open() }
                             }
                         }
 
-                        RowLayout {
+                        Style.SectionHeader {
+                            visible: root.wizardIconPreview().length > 0
+                            text: "Vorschau"
+                        }
+
+                        Rectangle {
                             Layout.fillWidth: true
                             visible: root.wizardIconPreview().length > 0
-                            spacing: Style.Tokens.spaceLg
-                            Rectangle {
-                                implicitWidth: 54; implicitHeight: 54; radius: Style.Tokens.radiusPill; color: Style.Theme.surfaceLow; border.width: 1; border.color: Style.Theme.fieldBorder
-                                Image { anchors.fill: parent; anchors.margins: 8; source: root.wizardIconPreview(); fillMode: Image.PreserveAspectFit; asynchronous: true; cache: false }
+                            implicitHeight: 64
+                            radius: Style.Tokens.radiusConnectedOuter
+                            color: Style.Theme.surfaceAlt
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 16
+                                anchors.rightMargin: 16
+                                spacing: Style.Tokens.spaceLg
+                                Rectangle {
+                                    implicitWidth: 46; implicitHeight: 46; radius: height / 2; color: Style.Theme.sourceSurface
+                                    Image { anchors.fill: parent; anchors.margins: 7; source: root.wizardIconPreview(); fillMode: Image.PreserveAspectFit; asynchronous: true; cache: false }
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 0
+                                    Text { text: root.wizardName.length > 0 ? root.wizardName : "WebApp"; color: Style.Theme.textPrimary; font.pixelSize: Style.Tokens.fontBodyLarge; font.weight: Font.Medium }
+                                    Text { text: "Icon-Vorschau"; color: Style.Theme.textSubtle; font.pixelSize: Style.Tokens.fontBodySmall }
+                                }
                             }
-                            Text { Layout.fillWidth: true; text: "Icon-Vorschau"; color: Style.Theme.labelMuted; font.pixelSize: Style.Tokens.fontLabel }
                         }
 
                         Text {
@@ -1931,38 +1869,11 @@ ShellRoot {
                         anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceLg
-
-                            Style.IconButton {
-                                icon: "\ue5c4"
-                                interactive: !root.actionBusy
-                                onClicked: root.closeActionMenu()
-                            }
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: Style.Tokens.spaceXxs
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: root.actionMenuApp ? root.actionMenuApp.name : "WebApp"
-                                    color: Style.Theme.textPrimaryAlt
-                                    font.pixelSize: Style.Tokens.fontDisplay
-                                    font.weight: Font.DemiBold
-                                    elide: Text.ElideRight
-                                }
-
-                                Text {
-                                    Layout.fillWidth: true
-                                    text: "Weitere Aktionen und Einstellungen für diese WebApp."
-                                    wrapMode: Text.WordWrap
-                                    color: Style.Theme.labelMuted
-                                    font.pixelSize: Style.Tokens.fontBodySmall
-                                }
-                            }
-
+                        Style.PageHeader {
+                            title: root.actionMenuApp ? root.actionMenuApp.name : "WebApp"
+                            subtitle: "Weitere Aktionen und Einstellungen für diese WebApp"
+                            interactive: !root.actionBusy
+                            onBack: root.closeActionMenu()
                         }
 
                         ColumnLayout {
@@ -2049,33 +1960,11 @@ ShellRoot {
                         anchors.margins: 0
                         spacing: Style.Tokens.spaceLg
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceLg
-
-                            Style.IconButton {
-                                icon: "\ue5c4"
-                                interactive: !root.appletSettingsBusy
-                                onClicked: root.closeAppletSettings()
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: !root.appletSettingsApp ? "Applet-Einstellungen" : root.appletSettingsApp.name + " · Applet"
-                                color: Style.Theme.textPrimaryAlt
-                                font.pixelSize: Style.Tokens.fontDisplay
-                                font.weight: Font.DemiBold
-                                elide: Text.ElideRight
-                            }
-
-                        }
-
-                        Text {
-                            Layout.fillWidth: true
-                            text: "Nur Capabilities aus der Runtime-Registry werden angeboten. Änderungen werden sofort vom Applet übernommen."
-                            wrapMode: Text.WordWrap
-                            color: Style.Theme.labelMuted
-                            font.pixelSize: Style.Tokens.fontBodySmall
+                        Style.PageHeader {
+                            title: !root.appletSettingsApp ? "Applet-Einstellungen" : root.appletSettingsApp.name + " · Applet"
+                            subtitle: "Verfügbare Funktionen des Caelestia-Applets"
+                            interactive: !root.appletSettingsBusy
+                            onBack: root.closeAppletSettings()
                         }
 
                         Text {
@@ -2085,69 +1974,29 @@ ShellRoot {
                             font.pixelSize: Style.Tokens.fontBodySmall
                         }
 
-                        Repeater {
-                            model: root.appletSettingsItems
+                        Style.SectionHeader {
+                            visible: root.appletSettingsItems.length > 0
+                            first: true
+                            text: "Funktionen"
+                        }
 
-                            delegate: Rectangle {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                implicitHeight: 58
-                                radius: Style.Tokens.radiusMd
-                                color: Style.Theme.surfaceLow
-                                border.width: 1
-                                border.color: Style.Theme.fieldBorder
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Style.Tokens.spaceXs
 
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 14
-                                    anchors.rightMargin: 12
-                                    spacing: Style.Tokens.spaceMd
+                            Repeater {
+                                model: root.appletSettingsItems
 
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 2
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: root.capabilityLabel(modelData.name)
-                                            color: Style.Theme.textPrimary
-                                            font.pixelSize: Style.Tokens.fontBodyLarge
-                                            font.weight: Font.Medium
-                                        }
-                                        Text {
-                                            Layout.fillWidth: true
-                                            text: root.capabilityDescription(modelData.name)
-                                            color: Style.Theme.textMuted
-                                            font.pixelSize: Style.Tokens.fontBodySmall
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-
-                                    Rectangle {
-                                        width: 42
-                                        height: 24
-                                        radius: 12
-                                        opacity: root.appletSettingsBusy ? 0.55 : 1
-                                        color: modelData.enabled ? Style.Theme.switchOn : Style.Theme.switchOff
-                                        border.width: 1
-                                        border.color: modelData.enabled ? Style.Theme.switchBorderOn : Style.Theme.switchBorderOff
-
-                                        Rectangle {
-                                            width: 18
-                                            height: 18
-                                            radius: 9
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            x: modelData.enabled ? parent.width - width - 3 : 3
-                                            color: modelData.enabled ? Style.Theme.primaryContent : Style.Theme.switchThumbOff
-                                            Behavior on x { NumberAnimation { duration: Style.Tokens.motionFast } }
-                                        }
-
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            enabled: !root.appletSettingsBusy
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: root.toggleAppletCapability(modelData.name, modelData.enabled)
-                                        }
-                                    }
+                                delegate: Style.SettingsToggle {
+                                    required property var modelData
+                                    required property int index
+                                    title: root.capabilityLabel(modelData.name)
+                                    description: root.capabilityDescription(modelData.name)
+                                    checked: modelData.enabled
+                                    interactive: !root.appletSettingsBusy
+                                    firstInGroup: index === 0
+                                    lastInGroup: index === root.appletSettingsItems.length - 1
+                                    onToggled: root.toggleAppletCapability(modelData.name, modelData.enabled)
                                 }
                             }
                         }
@@ -2264,70 +2113,16 @@ ShellRoot {
                             font.pixelSize: Style.Tokens.fontBody
                         }
 
-                        RowLayout {
+                        Style.SettingsToggle {
                             visible: root.pendingUninstallApp
                                 && root.pendingUninstallApp.installed
                                 && root.pendingUninstallApp.source === "user"
-                            Layout.fillWidth: true
-                            spacing: Style.Tokens.spaceLg
-
-                            ColumnLayout {
-                                Layout.fillWidth: true
-                                spacing: Style.Tokens.spaceXxs
-
-                                Text {
-                                    text: "Aus dem Katalog entfernen"
-                                    color: Style.Theme.sliderLabel
-                                    font.pixelSize: Style.Tokens.fontBody
-                                    font.weight: Font.Medium
-                                }
-
-                                Text {
-                                    text: "Löscht anschließend auch die User-App-Definition."
-                                    color: Style.Theme.textSubtle
-                                    font.pixelSize: Style.Tokens.fontLabel
-                                }
-                            }
-
-                            Rectangle {
-                                id: removeCatalogSwitch
-                                implicitWidth: 46
-                                implicitHeight: Style.Tokens.switchHeight
-                                radius: Style.Tokens.radiusSwitch
-                                color: root.removeFromCatalogAfterUninstall ? Style.Theme.switchOn : Style.Theme.switchOff
-                                border.width: activeFocus ? Style.Tokens.focusRingWidth : 1
-                                border.color: activeFocus
-                                    ? Style.Theme.focusStrong
-                                    : (root.removeFromCatalogAfterUninstall ? Style.Theme.switchBorderOn : Style.Theme.switchBorderOff)
-                                scale: switchPointer.pressed ? Style.Tokens.pressedScale : 1.0
-                                activeFocusOnTab: true
-
-                                Keys.onReturnPressed: root.removeFromCatalogAfterUninstall = !root.removeFromCatalogAfterUninstall
-                                Keys.onEnterPressed: root.removeFromCatalogAfterUninstall = !root.removeFromCatalogAfterUninstall
-                                Keys.onSpacePressed: root.removeFromCatalogAfterUninstall = !root.removeFromCatalogAfterUninstall
-
-                                Behavior on scale { NumberAnimation { duration: Style.Tokens.motionPress; easing.type: Easing.OutCubic } }
-
-                                Rectangle {
-                                    width: 20
-                                    height: 20
-                                    radius: Style.Tokens.radiusSm
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    x: root.removeFromCatalogAfterUninstall ? parent.width - width - 3 : 3
-                                    color: root.removeFromCatalogAfterUninstall ? Style.Theme.primaryContent : Style.Theme.switchThumbOff
-
-                                    Behavior on x {
-                                        NumberAnimation { duration: Style.Tokens.motionFast }
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: switchPointer
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.removeFromCatalogAfterUninstall = !root.removeFromCatalogAfterUninstall
-                                }
-                            }
+                            title: "Aus dem Katalog entfernen"
+                            description: "Löscht anschließend auch die User-App-Definition"
+                            checked: root.removeFromCatalogAfterUninstall
+                            firstInGroup: true
+                            lastInGroup: true
+                            onToggled: root.removeFromCatalogAfterUninstall = !root.removeFromCatalogAfterUninstall
                         }
 
                         RowLayout {

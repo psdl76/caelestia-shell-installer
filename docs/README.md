@@ -27,6 +27,7 @@ The later abandoned Phase 16.6 UI experiments are intentionally not part of this
 3. `phases/phase-17/PHASE17_1_MANAGER_NEXUS_LAYOUT.md`
 4. `phases/phase-17/PHASE17_2_MANAGER_EMBEDDED_PAGES.md`
 5. `phases/phase-17/PHASE17_3_NEXUS_MOTION_GROUPING.md`
+6. `phases/phase-17/PHASE17_4_SUBPAGE_CONSISTENCY.md`
 
 Phase 17 changes only the Manager's visual/layout contract. Phase 16.8 remains
 the frozen backend, runtime and packaged-lifecycle baseline.
