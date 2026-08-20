@@ -24,7 +24,7 @@ The baseline represented by this workspace is:
 - Phase 16.5 — optional applet activation: LIVE ACCEPTED / FROZEN
 - Phase 16.6 — capability settings: functionally accepted; UI baseline intentionally reset to `phase16-6-fix1-manager-more-actions`
 - Phase 16.7 — repair/upgrade/migration: LIVE ACCEPTED / FROZEN
-- Phase 16.8 — end-to-end closing gate: WIP, not yet frozen
+- Phase 16.8 — end-to-end closing gate: ACCEPTED / FROZEN
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -49,9 +49,9 @@ The current task for Phase 16.8 is integration verification, not UI redesign.
 9. Successful uninstall of an app must reset only that app's activation override to `false`; capability settings are preserved unless a documented contract says otherwise.
 10. Repair/upgrade state migration must be idempotent and use atomic writes/backups as implemented in Phase 16.7.
 
-## Phase 16.8 WIP notes
+## Phase 16.8 closing notes
 
-Phase 16.8 has already exposed two integration regressions that are fixed in this workspace and must remain covered by regression tests:
+Phase 16.8 exposed two integration regressions that are fixed in this workspace and must remain covered by regression tests:
 
 - successful uninstall must reset the applet activation override for the uninstalled app
 - `repair.sh` / `upgrade.sh --preflight` must handle the migration tool's `NEEDS-MIGRATION` exit path without the global `ERR` trap aborting self-heal
@@ -163,4 +163,4 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-The immediate goal is to complete **Phase 16.8 End-to-End** without adding features: prove the accepted architecture works as one packaged lifecycle, fix only demonstrated integration regressions, then freeze the result.
+**Phase 16.8 End-to-End is accepted and frozen.** Preserve the proven packaged lifecycle and do not add features or reopen frozen Phase 16 behavior without a demonstrated regression.

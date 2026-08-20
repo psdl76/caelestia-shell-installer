@@ -1,5 +1,7 @@
 # Phase 16.8 — End-to-End Final Gate
 
+Status: **ACCEPTED / FROZEN**
+
 ## Scope
 
 Phase 16.8 is the final integration gate for the Phase 16 line. It adds no new product feature and makes no Manager UI redesign. The baseline remains the Phase 16.6 fix1 Manager UI plus the accepted Phase 16.7 runtime-state migration path.
@@ -41,3 +43,13 @@ bash tests/test_shell_syntax.sh
 ```
 
 No network access is required by the Phase 16.8-specific tests. Installed-package tests use isolated temporary HOME/XDG roots and stub external desktop/runtime commands where appropriate.
+
+## Final acceptance
+
+Accepted on 2026-08-20 after the documented gates completed successfully:
+
+- Phase 16.8 end-to-end gate: 22/22 tests passed
+- Phase 13 packaging gate: 17/17 tests passed
+- shell syntax gate: passed for all shell scripts
+
+The gate runners isolate their runtime lock directories, and CLI contract tests use disposable HOME/XDG roots. The acceptance run did not modify the developer's installed WebApps or persistent applet state. No graphical Manager redesign or new product feature is part of this freeze.

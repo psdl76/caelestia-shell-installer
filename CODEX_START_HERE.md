@@ -1,6 +1,6 @@
 # Codex / Zed workspace
 
-This is a development workspace prepared from the current Phase 16.8 WIP tree.
+This is a development workspace prepared from the accepted Phase 16.8 tree.
 
 Read in this order:
 
@@ -9,4 +9,4 @@ Read in this order:
 3. `docs/README.md`
 4. `docs/phases/phase-16/PHASE16_8_END_TO_END.md`
 
-Phase 16.8 is not yet frozen. Do not add features or redesign the Manager while closing the E2E gate.
+Phase 16.8 is accepted and frozen. Do not add features or redesign the Manager without an explicit new phase or a demonstrated regression.
