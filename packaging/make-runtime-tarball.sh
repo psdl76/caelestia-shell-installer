@@ -31,7 +31,6 @@ while IFS= read -r entry; do
 done < "$ROOT/packaging/runtime-entries.txt"
 mkdir -p "$TMP/$NAME/packaging/arch/wrappers"
 cp -a "$ROOT/packaging/arch/wrappers/." "$TMP/$NAME/packaging/arch/wrappers/"
-cp -a "$ROOT/packaging/LICENSE-PENDING.txt" "$TMP/$NAME/packaging/"
 cp -a "$ROOT/packaging/caelestia-webapps-manager.desktop" "$TMP/$NAME/packaging/"
 tar -C "$TMP" -czf "$OUT/$NAME.tar.gz" "$NAME"
 printf '%s\n' "$OUT/$NAME.tar.gz"

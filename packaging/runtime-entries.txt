@@ -1,4 +1,5 @@
 VERSION
+LICENSE
 apps
 assets
 bin

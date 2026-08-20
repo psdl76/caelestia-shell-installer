@@ -47,7 +47,7 @@ remove_owned_wrapper "$PREFIX/bin/caelestia-webapps"
 remove_owned_wrapper "$PREFIX/bin/caelestia-webapps-manager"
 
 rm -f -- "$PREFIX/share/applications/caelestia-webapps-manager.desktop"
-rm -f -- "$PREFIX/share/licenses/caelestia-webapps/LICENSE-PENDING"
+rm -f -- "$PREFIX/share/licenses/caelestia-webapps/LICENSE"
 rmdir --ignore-fail-on-non-empty "$PREFIX/share/licenses/caelestia-webapps" 2>/dev/null || true
 
 cat <<'EOF'

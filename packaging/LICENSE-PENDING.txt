@@ -1,6 +1,0 @@
-Caelestia WebApps - licensing placeholder
-
-A public redistribution license has not yet been selected for this project.
-This file exists so local/private Arch packaging does not silently claim an
-incorrect license. Choose and add the real project license before publishing
-an AUR package or public release.

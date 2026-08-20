@@ -123,8 +123,7 @@ write_wrapper "$CORE_DIR/bin/caelestia-webapps" "$BIN_DIR/caelestia-webapps" "CL
 write_wrapper "$CORE_DIR/manager.sh" "$BIN_DIR/caelestia-webapps-manager" "Manager"
 install -m 644 "$SOURCE_ROOT/packaging/caelestia-webapps-manager.desktop" \
     "$APP_DIR/caelestia-webapps-manager.desktop"
-install -m 644 "$SOURCE_ROOT/packaging/LICENSE-PENDING.txt" \
-    "$LICENSE_DIR/LICENSE-PENDING"
+install -m 644 "$SOURCE_ROOT/LICENSE" "$LICENSE_DIR/LICENSE"
 
 printf '\nCaelestia WebApps core installed.\n'
 printf 'Version : %s\n' "$VERSION"
