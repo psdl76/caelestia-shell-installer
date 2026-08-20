@@ -1210,9 +1210,6 @@ ShellRoot {
                             Style.IconButton {
                                 icon: "\ue40a"
                                 active: Style.Theme.caelestiaThemeAvailable
-                                tooltip: Style.Theme.caelestiaThemeAvailable
-                                    ? "Caelestia Theme aktiv" + (Style.Theme.caelestiaMode.length > 0 ? " (" + Style.Theme.caelestiaMode + ")" : "")
-                                    : "Manager-Fallback-Theme aktiv"
                                 interactive: false
                             }
 
@@ -1319,16 +1316,8 @@ ShellRoot {
                                             required property var modelData
                                             Layout.fillWidth: true
                                             implicitHeight: Style.Tokens.appRowHeight
-                                            radius: rowHover.hovered ? Style.Tokens.radiusDialog : Style.Tokens.radiusLg
-                                            color: rowHover.hovered ? Style.Theme.controlHover : Style.Theme.navigationItem
-
-                                            // Do not animate the outer hover fill. A fade-out of the old
-                                            // delegate plus fade-in of the new one makes two neighbouring
-                                            // rows appear highlighted at once, especially in light themes.
-                                            // Radius motion remains for the Caelestia morphing feel.
-                                            Behavior on radius { Style.EffectAnimation {} }
-
-                                            HoverHandler { id: rowHover }
+                                            radius: Style.Tokens.radiusLg
+                                            color: Style.Theme.surfaceAlt
 
                                             RowLayout {
                                                 anchors.fill: parent
@@ -1340,7 +1329,7 @@ ShellRoot {
                                                     implicitWidth: Style.Tokens.appIconSurface
                                                     implicitHeight: Style.Tokens.appIconSurface
                                                     radius: width / 2
-                                                    color: rowHover.hovered ? Style.Theme.rowHover : Style.Theme.rowSurface
+                                                    color: Style.Theme.sourceSurface
 
                                                     Image {
                                                         anchors.centerIn: parent
@@ -1365,38 +1354,40 @@ ShellRoot {
                                                         font.weight: Font.DemiBold
                                                         elide: Text.ElideRight
                                                         Layout.fillWidth: true
-
-                                                        HoverHandler { id: appNameHover }
-                                                        ToolTip.visible: appNameHover.hovered && appNameText.truncated
-                                                        ToolTip.text: modelData.name
                                                     }
 
                                                     Rectangle {
-                                                        implicitWidth: Style.Tokens.sourceIconSize
+                                                        implicitWidth: sourceTypeContent.implicitWidth + 12
                                                         implicitHeight: Style.Tokens.sourceIconSize
                                                         radius: Style.Tokens.radiusSource
-                                                        color: sourceTypeHover.hovered ? Style.Theme.sourceHover : Style.Theme.sourceSurface
+                                                        color: Style.Theme.sourceSurface
                                                         border.width: 1
                                                         border.color: modelData.source === "user" ? Style.Theme.userSourceBorder : Style.Theme.catalogSourceBorder
 
-                                                        HoverHandler { id: sourceTypeHover }
-
-                                                        Text {
+                                                        RowLayout {
+                                                            id: sourceTypeContent
                                                             anchors.centerIn: parent
-                                                            text: modelData.source === "user" ? "\ue7fd" : "\ue865"
-                                                            color: modelData.source === "user" ? Style.Theme.userSource : Style.Theme.textSecondary
-                                                            font.family: "Material Symbols Rounded"
-                                                            font.pixelSize: Style.Tokens.fontBodyLarge
-                                                            font.weight: Font.Medium
-                                                        }
+                                                            spacing: Style.Tokens.spaceXxs
 
-                                                        ToolTip.visible: sourceTypeHover.hovered
-                                                        ToolTip.text: modelData.source === "user" ? "Eigene App" : "Katalog-App"
+                                                            Text {
+                                                                text: modelData.source === "user" ? "\ue7fd" : "\ue865"
+                                                                color: modelData.source === "user" ? Style.Theme.userSource : Style.Theme.textSecondary
+                                                                font.family: "Material Symbols Rounded"
+                                                                font.pixelSize: Style.Tokens.fontBodyLarge
+                                                                font.weight: Font.Medium
+                                                            }
+
+                                                            Text {
+                                                                text: modelData.source === "user" ? "Eigene App" : "Katalog-App"
+                                                                color: Style.Theme.textSecondary
+                                                                font.pixelSize: Style.Tokens.fontLabel
+                                                            }
+                                                        }
                                                     }
 
                                                     Text {
                                                         text: modelData.comment || modelData.genericName
-                                                        color: Style.Theme.textTertiary
+                                                        color: Style.Theme.textSubtle
                                                         font.pixelSize: Style.Tokens.fontBodySmall
                                                         elide: Text.ElideRight
                                                         Layout.fillWidth: true
@@ -1429,21 +1420,22 @@ ShellRoot {
                                                         visible: modelData.applet?.available === true && modelData.applet?.support === "supported"
                                                         minimumWidth: 82
                                                         label: root.appletEnabled(modelData.id) ? "Applet an" : "Applet aus"
-                                                        tooltip: root.appletEnabled(modelData.id) ? "Applet in der Caelestia-Bar deaktivieren" : "Applet in der Caelestia-Bar aktivieren"
                                                         interactive: !root.actionBusy && root.appletStateAvailable
                                                         onClicked: root.toggleApplet(modelData)
                                                     }
-                                                    Style.IconButton {
-                                                        icon: "⋯"
-                                                        tooltip: "Weitere Aktionen"
+                                                    Style.ActionButton {
+                                                        minimumWidth: 88
+                                                        icon: "\ue5d3"
+                                                        label: "Aktionen"
                                                         interactive: !root.actionBusy
                                                         onClicked: root.openActionMenu(modelData)
                                                     }
                                                 }
-                                                Style.IconButton {
+                                                Style.ActionButton {
                                                     visible: !modelData.installed && modelData.source === "user"
-                                                    icon: "⋯"
-                                                    tooltip: "Weitere Aktionen"
+                                                    minimumWidth: 88
+                                                    icon: "\ue5d3"
+                                                    label: "Aktionen"
                                                     interactive: !root.actionBusy
                                                     onClicked: root.openActionMenu(modelData)
                                                 }
@@ -1570,7 +1562,6 @@ ShellRoot {
 
                             Style.IconButton {
                                 icon: "\ue5c4"
-                                tooltip: "Zurück"
                                 interactive: !root.actionBusy
                                 onClicked: root.closeWizard()
                             }
@@ -1863,7 +1854,6 @@ ShellRoot {
 
                             Style.IconButton {
                                 icon: "\ue5c4"
-                                tooltip: "Zurück"
                                 interactive: !root.actionBusy
                                 onClicked: root.closeActionMenu()
                             }
@@ -1967,7 +1957,6 @@ ShellRoot {
 
                             Style.IconButton {
                                 icon: "\ue5c4"
-                                tooltip: "Zurück"
                                 interactive: !root.appletSettingsBusy
                                 onClicked: root.closeAppletSettings()
                             }

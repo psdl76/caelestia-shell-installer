@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 import QtQuick.Shapes
 
 Item {
@@ -60,7 +59,5 @@ Item {
             onTapped: root.clicked()
         }
 
-        ToolTip.visible: pointer.hovered
-        ToolTip.text: "Manager schließen"
     }
 }

@@ -34,6 +34,12 @@ visually unrelated dialog above the Manager.
   corners, small inner corners, compact gaps and no card outlines.
 - Action rows share the main page's typography, spacing and semantic colours;
   destructive actions change emphasis without becoming a different layout.
+- The Manager does not use native Qt tooltips. Every catalog action has a
+  visible text label, and source ownership is written beside its icon.
+- Content rows use the Nexus `surfaceContainer` role; secondary row text uses
+  the `outline` role while navigation descriptions use `onSurfaceVariant`.
+- Hover feedback is clipped to the control's actual rounded corner geometry;
+  non-interactive catalog rows do not acquire a misleading hover selection.
 
 ## Modal boundary
 

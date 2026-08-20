@@ -42,7 +42,7 @@ Rectangle {
             Text {
                 Layout.fillWidth: true
                 text: root.description
-                color: Theme.textMuted
+                color: Theme.textSubtle
                 font.pixelSize: Tokens.fontBodySmall
                 elide: Text.ElideRight
             }

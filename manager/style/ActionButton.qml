@@ -1,12 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls
 
 Rectangle {
     id: root
     property string label: ""
     property string icon: ""
-    property string tooltip: ""
     property bool primary: false
     property bool danger: false
     property bool interactive: true
@@ -20,9 +18,9 @@ Rectangle {
     opacity: root.interactive ? 1.0 : 0.45
     scale: state.pressed && root.interactive ? Tokens.pressedScale : 1.0
     color: {
-        if (root.danger) return state.hovered && root.interactive ? Theme.dangerActionHover : Theme.dangerAction
-        if (root.primary) return state.hovered && root.interactive ? Theme.primaryHover : Theme.primary
-        return state.hovered && root.interactive ? Theme.controlHover : Theme.controlSurface
+        if (root.danger) return Theme.dangerAction
+        if (root.primary) return Theme.primary
+        return Theme.controlSurface
     }
     border.width: root.activeFocus ? Tokens.focusRingWidth : (root.primary || root.danger ? 0 : 1)
     border.color: root.activeFocus ? Theme.focusStrong : Theme.fieldBorder
@@ -59,6 +57,4 @@ Rectangle {
         color: root.danger ? Theme.dangerActionText : (root.primary ? Theme.primaryContent : Theme.controlText)
         onClicked: root.clicked()
     }
-    ToolTip.visible: state.hovered && root.tooltip.length > 0
-    ToolTip.text: root.tooltip
 }

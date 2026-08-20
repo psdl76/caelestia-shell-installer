@@ -17,6 +17,14 @@ Item {
         anchors.fill: parent
         color: root.color
         opacity: root.showHoverBackground && pointer.containsMouse ? 0.08 : 0
+        topLeftRadius: root.parent && root.parent.topLeftRadius !== undefined
+            ? root.parent.topLeftRadius : (root.parent && root.parent.radius !== undefined ? root.parent.radius : 0)
+        topRightRadius: root.parent && root.parent.topRightRadius !== undefined
+            ? root.parent.topRightRadius : (root.parent && root.parent.radius !== undefined ? root.parent.radius : 0)
+        bottomLeftRadius: root.parent && root.parent.bottomLeftRadius !== undefined
+            ? root.parent.bottomLeftRadius : (root.parent && root.parent.radius !== undefined ? root.parent.radius : 0)
+        bottomRightRadius: root.parent && root.parent.bottomRightRadius !== undefined
+            ? root.parent.bottomRightRadius : (root.parent && root.parent.radius !== undefined ? root.parent.radius : 0)
 
         Behavior on opacity { EffectAnimation { duration: Tokens.motionFast } }
     }

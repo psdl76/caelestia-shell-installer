@@ -5,7 +5,6 @@ ROOT = Path(__file__).resolve().parents[1]
 SHELL = (ROOT / "manager/shell.qml").read_text(encoding="utf-8")
 STYLE = ROOT / "manager/style"
 QMLDIR = (STYLE / "qmldir").read_text(encoding="utf-8")
-CLOSE_DOCK = (STYLE / "WindowCloseDock.qml").read_text(encoding="utf-8")
 DOC = ROOT / "docs/phases/phase-17/PHASE17_1_MANAGER_NEXUS_LAYOUT.md"
 
 for name in (
@@ -36,7 +35,7 @@ assert "id: contentSwitch" in SHELL
 assert "Style.SpatialAnimation" in SHELL
 assert "Style.EffectAnimation" in SHELL
 assert "Style.WindowCloseDock {" in SHELL
-assert 'ToolTip.text: "Manager schließen"' in CLOSE_DOCK
+assert "ToolTip" not in SHELL
 assert "function selectCategory(id, direction)" in SHELL
 assert "categoryFlick" not in SHELL
 assert SHELL.index("id: managerSearch") < SHELL.index("id: contentPane")

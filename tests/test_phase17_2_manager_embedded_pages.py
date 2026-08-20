@@ -18,7 +18,7 @@ for page in ("wizard", "actions", "applet-settings"):
 
 assert SHELL.count("Behavior on opacity { Style.EffectAnimation {} }") >= 3
 assert SHELL.count("Behavior on x { Style.SpatialAnimation {} }") >= 3
-assert SHELL.count('tooltip: "Zurück"') >= 3
+assert SHELL.count('icon: "\\ue5c4"') >= 3
 assert SHELL.count("Flow {") >= 2
 
 for name in ("WindowCloseDock.qml", "SettingsAction.qml"):
@@ -34,9 +34,13 @@ assert 'fillColor: Theme.mainSurface' in close_dock
 assert "Theme.surfaceAlt" in settings_action
 assert "topLeftRadius: firstInGroup" in settings_action
 assert "bottomLeftRadius: lastInGroup" in settings_action
+assert "color: Theme.textSubtle" in settings_action
 assert "function actionMenuEntries()" in SHELL
 assert "Style.SettingsAction {" in SHELL
-assert 'tooltip: "Manager schließen"' not in SHELL
+assert "ToolTip" not in SHELL
+assert "tooltip:" not in SHELL
+assert 'label: "Aktionen"' in SHELL
+assert "color: Style.Theme.surfaceAlt" in SHELL
 
 # Destructive confirmation intentionally remains an overlay.
 assert "visible: root.pendingUninstallApp !== null" in SHELL
