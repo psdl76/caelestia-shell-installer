@@ -55,11 +55,15 @@ allowed = {
     Path('scripts/validate_catalog.py'),
     Path('scripts/validate_applet_runtime_sources.py'),
 }
+ignored_roots = {
+    '.cache', '.git', '.pytest_cache', '.tmp', '.worktrees',
+    'build', 'dist', 'tests', 'tmp',
+}
 for path in ROOT.rglob('*'):
     if not path.is_file():
         continue
     rel = path.relative_to(ROOT)
-    if rel.parts[0] in {'tests', '.git'} or path.suffix == '.md':
+    if rel.parts[0] in ignored_roots or path.suffix == '.md':
         continue
     if rel in allowed:
         continue

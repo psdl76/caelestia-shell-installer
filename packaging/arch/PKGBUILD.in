@@ -5,7 +5,7 @@ pkgver=0.4.0
 pkgrel=1
 pkgdesc="Firefox-based WebApp manager for Hyprland and Caelestia"
 arch=('any')
-url="https://github.com/OWNER/caelestia-webapps"
+url=""
 license=('custom')
 depends=('bash' 'python' 'firefox' 'hyprland' 'quickshell')
 optdepends=(
@@ -20,7 +20,7 @@ package() {
   local core="$pkgdir/usr/lib/$pkgname"
 
   install -dm755 "$core"
-  cp -a     "$src/VERSION"     "$src/apps"     "$src/assets"     "$src/bin"     "$src/config"     "$src/data"     "$src/lib"     "$src/manager"     "$src/scripts"     "$src/templates"     "$src/catalog.sh"     "$src/install.sh"     "$src/repair.sh"     "$src/uninstall.sh"     "$src/upgrade.sh"     "$src/manager.sh"     "$core/"
+  cp -a --no-preserve=ownership     "$src/VERSION"     "$src/apps"     "$src/assets"     "$src/bin"     "$src/config"     "$src/data"     "$src/lib"     "$src/manager"     "$src/scripts"     "$src/templates"     "$src/catalog.sh"     "$src/install.sh"     "$src/repair.sh"     "$src/uninstall.sh"     "$src/upgrade.sh"     "$src/manager.sh"     "$core/"
 
   install -Dm755 "$src/packaging/arch/wrappers/caelestia-webapps"     "$pkgdir/usr/bin/caelestia-webapps"
   install -Dm755 "$src/packaging/arch/wrappers/caelestia-webapps-manager"     "$pkgdir/usr/bin/caelestia-webapps-manager"

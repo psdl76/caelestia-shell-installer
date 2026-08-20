@@ -16,7 +16,7 @@ Read in this order:
 10. `docs/phases/phase-17/PHASE17_6_ABOUT_PAGE.md`
 11. `docs/phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
 
-Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 preparation is the
-next product step. Do not alter the frozen CLI, lifecycle, applet, capability or
-Manager visual contracts without a demonstrated regression or a new explicit
-phase.
+Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 is the current
+local/private tagged release. Do not alter the frozen CLI, lifecycle, applet,
+capability or Manager visual contracts without a demonstrated regression or a
+new explicit phase.

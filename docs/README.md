@@ -9,6 +9,7 @@ Start with the repository root `AGENTS.md` and `README.md`.
 - `history/pocs/` contains native drawer prototypes kept only for historical context.
 - `history/manager/` contains older manager evolution notes.
 - `history/runtime/` contains older Firefox/runtime and Caelestia motion notes.
+- `releases/` contains release notes and publication boundaries.
 
 ## Current reading order for Phase 16.8
 
@@ -35,3 +36,7 @@ The later abandoned Phase 16.6 UI experiments are intentionally not part of this
 Phase 17 changes only the Manager's visual/layout contract. Phase 16.8 remains
 the frozen backend, runtime and packaged-lifecycle baseline. Phase 17.7 is the
 accepted and frozen Manager baseline.
+
+## Current release
+
+- `releases/RELEASE_0.4.0.md` — local/private 0.4.0 release

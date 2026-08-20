@@ -1,90 +1,74 @@
-# Caelestia WebApps – Manager PoC 01
+# Caelestia WebApps 0.4.0
 
-Phase-5 checkpoint of the plugin-ready Caelestia WebApps project.
+Caelestia WebApps is a standalone manager for Firefox-based WebApps on
+Hyprland, visually aligned with the Caelestia Shell Nexus settings UI.
 
-This package contains:
+Release 0.4.0 is the accepted Phase 16.8 lifecycle and Phase 17.7 Manager
+baseline. It is currently a local/private release: a public repository URL and
+redistribution license have not yet been selected.
 
-- UI-independent WebApps engine
-- stable CLI/JSON API (`apiVersion: 1`)
-- Catalog v2 (`schemaVersion: 2`)
-- first standalone Quickshell Manager PoC
+## Features
 
-The manager is **not** integrated into the Caelestia Sidebar or Bar and does not
-patch any Caelestia QML source files.
+- catalog of built-in and user-defined WebApps;
+- isolated Firefox profiles and Hyprland integration;
+- install, launch, setup, repair and uninstall lifecycle through a stable CLI;
+- optional Caelestia TopBar applets and persistent capability settings;
+- standalone QML/Quickshell Manager with Nexus-style navigation and motion;
+- WebApp detail pages, add/edit wizard, confirmation flows and About page;
+- keyboard navigation, live runtime state and Caelestia-derived public palette
+  bridge without private Caelestia QML imports.
 
-## Start the manager
+## Requirements
+
+- Arch Linux or a compatible userspace
+- Hyprland
+- Quickshell
+- Firefox
+- Bash and Python 3
+
+## Run from the workspace
 
 ```bash
 ./manager.sh
 ```
 
-The launcher refreshes Catalog v2 through the stable CLI and then starts the
-standalone Quickshell window.
+The Manager performs its preflight, refreshes Catalog v2 through
+`bin/caelestia-webapps` and then opens the standalone Quickshell window.
 
-## Phase-5 scope
+## Architecture
 
-Implemented:
+- CLI JSON API: v1
+- catalog schema: v2
+- applet registry schema: v1
+- Manager-to-engine calls always use argument lists
+- user definitions and persistent runtime settings remain outside package-owned
+  source files
+- plugin and standalone code do not import private Caelestia APIs
 
-- standalone `FloatingWindow`
-- initial Catalog v2 load
-- data-driven categories
-- local search
-- installed count
-- icon rendering
-- Open for installed apps through the stable CLI
-- clean manager exit when its window closes
+## Validation
 
-Intentionally deferred:
-
-- robust live Catalog watching/recovery — Phase 6
-- long-running `Process` action bridge for install/repair/uninstall — Phase 7
-- Add/Edit WebApp wizard — Phase 8
-- user app persistence — Phase 9
-- final Caelestia styling/import decisions — Phase 10
-
-## Architecture contract
-
-The manager consumes only the stable Catalog and CLI boundaries. The engine does
-not import, source, or otherwise depend on the manager implementation.
-
-## Tests
+The complete accepted product gate is:
 
 ```bash
-./tests/run.sh
+bash tests/run_phase17_7_closing_gate.sh
 ```
 
-Current active suite: 20 tests.
+It includes the Phase 17 Manager suite, the 22-test Phase 16.8 lifecycle gate,
+shell syntax validation and the 17-test packaging/product gate. Destructive
+lifecycle tests run in disposable HOME/XDG environments.
 
-See:
+The local 0.4.0 release gate, including artifact builds, is:
 
-- `PHASE2_ENGINE_CORE.md`
-- `PHASE3_ENGINE_API.md`
-- `PHASE4_CATALOG_V2.md`
-- `PHASE5_MANAGER_POC.md`
+```bash
+bash tests/run_release_0_4_0_gate.sh
+```
 
+## Packaging and licensing
 
-## Phase 6 checkpoint
+The runtime source archive and Arch package are suitable for local/private use.
+The desktop entry intentionally uses the generic `applications-internet` icon.
+Before public redistribution, replace the placeholder package URL and select an
+explicit project license; see `packaging/LICENSE-PENDING.txt`.
 
-See `PHASE6_MANAGER_LIVE.md` for FileView live reload and transient running-state rules.
-
-
-## Phase 7 checkpoint
-
-See `PHASE7_PROCESS_BRIDGE.md` for the complete Quickshell Process action bridge.
-
-
-## Phase 8 checkpoint
-
-See `PHASE8_USER_APPS.md` for persistent user definitions and the Add/Edit Wizard.
-
-
-## Phase 8.1 checkpoint
-
-See `PHASE8_1_ICONS_DELETE.md`.
-
-## Phase 15.3a status capability model
-
-The catalog now carries additive `provider`, `tags`, `featured`, and
-`statusIntegration` metadata. `appletVisible` remains launcher/popout visibility;
-status integration is a separate capability contract. See
-`PHASE15_3A_STATUS_CAPABILITY_MODEL.md`.
+See `docs/phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md` and
+`docs/releases/RELEASE_0.4.0.md` for the accepted baseline and release notes.

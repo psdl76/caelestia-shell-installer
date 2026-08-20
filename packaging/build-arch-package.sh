@@ -1,8 +1,7 @@
-\
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.4.0"
+VERSION="$(<"$ROOT/VERSION")"
 BUILD_DIR="${1:-$ROOT/dist/arch}"
 command -v makepkg >/dev/null 2>&1 || {
     echo "makepkg not found. Run this helper on Arch Linux with pacman available." >&2

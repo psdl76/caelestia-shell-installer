@@ -1,8 +1,7 @@
-\
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="${1:-0.4.0}"
+VERSION="${1:-$(<"$ROOT/VERSION")}"
 OUT="${2:-$ROOT/dist}"
 NAME="caelestia-webapps-$VERSION"
 mkdir -p "$OUT"

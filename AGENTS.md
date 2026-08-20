@@ -32,6 +32,7 @@ The baseline represented by this workspace is:
 - Phase 17.5 — Nexus AllApps/WebApp-Info navigation: LIVE ACCEPTED / FROZEN
 - Phase 17.6 — Nexus-style About page: LIVE ACCEPTED / FROZEN
 - Phase 17.7 — Manager visual acceptance and closing gate: ACCEPTED / FROZEN
+- Release 0.4.0 — local/private package release: RELEASED / TAGGED
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -176,7 +177,8 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phases 16.8 and 17.7 are accepted and frozen.** The next product step is
-release 0.4.0 preparation. Preserve the proven packaged lifecycle, the accepted
-Nexus-style Manager baseline and the standalone boundary from private Caelestia
-QML dependencies.
+**Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 is the current
+local/private tagged release.** Preserve the proven packaged lifecycle, the
+accepted Nexus-style Manager baseline and the standalone boundary from private
+Caelestia QML dependencies. Public publication remains blocked until a canonical
+repository URL and redistribution license are selected.

@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 cli_text = (ROOT/'bin/caelestia-webapps').read_text(encoding='utf-8')
 watch_text = (ROOT/'scripts/notification_watch.py').read_text(encoding='utf-8')
+validator_text = (ROOT/'scripts/validate_applet_runtime_sources.py').read_text(encoding='utf-8')
 
 # Runtime source quarantine.
 assert 'statusIntegration' not in cli_text
@@ -14,6 +15,7 @@ assert 'def _media_candidate_for_player(player: str, registry_apps:' in cli_text
 assert 'registry_apps = [a for a in load_applet_registry().get("apps", [])' in cli_text
 assert 'def integration_status_all() -> list[dict[str, Any]]:\n    registry = load_applet_registry()' in cli_text
 assert cli_text.count('app = applet_runtime_entry(command, args[1])') >= 2
+assert "'build', 'dist', 'tests', 'tmp'" in validator_text
 
 source_audit = subprocess.run([sys.executable, str(ROOT/'scripts/validate_applet_runtime_sources.py'), str(ROOT)], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
 report = json.loads(source_audit.stdout)
