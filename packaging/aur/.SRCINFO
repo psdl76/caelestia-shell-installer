@@ -1,0 +1,18 @@
+pkgbase = caelestia-webapps
+	pkgdesc = Unofficial Firefox WebApp manager for Hyprland and Caelestia-style desktops
+	pkgver = 0.4.1
+	pkgrel = 1
+	url = https://github.com/psdl76/caelestia-shell-installer
+	arch = any
+	license = GPL-3.0-only
+	depends = bash
+	depends = python
+	depends = firefox
+	depends = hyprland
+	depends = quickshell
+	optdepends = desktop-file-utils: refresh the desktop application database
+	optdepends = gtk-update-icon-cache: refresh the hicolor icon cache for installed WebApps
+	source = caelestia-webapps-0.4.1.tar.gz::https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.1/caelestia-webapps-0.4.1.tar.gz
+	sha256sums = c4cbfaa06a253b532ac50f5c755849b24ee8b16495c69bc59eb03524786bfe3e
+
+pkgname = caelestia-webapps

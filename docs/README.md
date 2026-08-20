@@ -43,6 +43,7 @@ accepted and frozen Manager baseline.
 2. `phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
 3. `phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`
 4. `phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md`
+5. `phases/phase-19/PHASE19_AUR_COMMUNITY_LAUNCH.md`
 
 Phase 18.1 adds German/English presentation without changing the frozen Phase
 17.7 layout or Phase 16.8 lifecycle contracts. Both language modes are live
@@ -50,7 +51,12 @@ accepted and Phase 18.1 is frozen. Phase 18.2 prevents full monitor reloads for
 app lifecycle changes on current Hyprland Lua configurations and is also live
 accepted and frozen.
 
+Phase 19 contains presentation, AUR and community-launch work only. Its AUR
+candidate is locally verified, but publication remains blocked while new AUR
+account registration is unavailable.
+
 ## Current release
 
 - `releases/RELEASE_0.4.0.md` — local/private 0.4.0 release
 - `releases/RELEASE_0.4.1.md` — localized, locally verified 0.4.1 release
+- `releases/COMMUNITY_LAUNCH_0.4.1.md` — copy-ready community launch kit

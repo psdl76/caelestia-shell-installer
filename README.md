@@ -1,14 +1,26 @@
 # Caelestia WebApps 0.4.1
 
-Caelestia WebApps is a standalone manager for Firefox-based WebApps on
-Hyprland, visually aligned with the Caelestia Shell Nexus settings UI.
+[![Release](https://img.shields.io/github/v/release/psdl76/caelestia-shell-installer)](https://github.com/psdl76/caelestia-shell-installer/releases/latest)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
+
+Caelestia WebApps is a standalone Firefox WebApp manager for Hyprland. Its
+navigation, motion and visual grouping are designed to feel at home next to the
+Caelestia Shell Nexus settings UI.
+
+| Catalog | WebApp actions |
+| --- | --- |
+| ![Caelestia WebApps catalog](media/manager-catalog.png) | ![Caelestia WebApp information and actions](media/manager-webapp-info.png) |
+
+> [!IMPORTANT]
+> Caelestia WebApps is an unofficial community project. It is not affiliated
+> with or maintained by the Caelestia Shell or Hyprland projects.
 
 Release 0.4.1 adds accepted German/English localization to the Phase 16.8
 lifecycle and Phase 17.7 Manager baseline. Its real install/uninstall lifecycle
 has passed without a Hyprland monitor reload. The project is licensed under
 GPL-3.0-only.
 
-## Features
+## Highlights
 
 - catalog of built-in and user-defined WebApps;
 - isolated Firefox profiles and Hyprland integration;
@@ -22,6 +34,27 @@ GPL-3.0-only.
   override;
 - reload-free app rule updates for current Hyprland Lua configurations.
 
+## Install
+
+### Rootless release install
+
+Install the required software listed below, then download and install the
+current release into `~/.local`:
+
+```bash
+curl -LO https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.1/caelestia-webapps-0.4.1.tar.gz
+tar -xzf caelestia-webapps-0.4.1.tar.gz
+cd caelestia-webapps-0.4.1
+./packaging/install-core.sh
+~/.local/bin/caelestia-webapps-manager
+```
+
+The package installer replaces only package-owned Core files. WebApps, Firefox
+profiles, settings and runtime state remain user-owned and survive upgrades or
+Core removal.
+
+An AUR package named `caelestia-webapps` is being prepared.
+
 ## Requirements
 
 - Arch Linux or a compatible userspace
@@ -30,7 +63,7 @@ GPL-3.0-only.
 - Firefox
 - Bash and Python 3
 
-## Run from the workspace
+## Run from a source checkout
 
 ```bash
 ./manager.sh
@@ -56,6 +89,15 @@ CAELESTIA_WEBAPPS_LANGUAGE=en ./manager.sh
 - user definitions and persistent runtime settings remain outside package-owned
   source files
 - plugin and standalone code do not import private Caelestia APIs
+
+## Support and contributions
+
+- Report reproducible problems through
+  [GitHub Issues](https://github.com/psdl76/caelestia-shell-installer/issues).
+- Include the app ID, action, expected result and relevant command output.
+- Do not attach Firefox profiles, tokens, cookies or other private runtime data.
+- Contributions should preserve the stable CLI boundary and the frozen
+  lifecycle contracts documented under `docs/`.
 
 ## Validation
 

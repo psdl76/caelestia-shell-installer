@@ -35,7 +35,8 @@ The baseline represented by this workspace is:
 - Release 0.4.0 — local/private package release: RELEASED / TAGGED
 - Phase 18.1 — German/English Manager localization: LIVE ACCEPTED / FROZEN
 - Phase 18.2 — reload-free Hyprland Lua integration: LIVE ACCEPTED / FROZEN
-- Release 0.4.1 — localized package release: PUBLICATION READY / TAG PENDING
+- Release 0.4.1 — localized package release: PUBLIC / LIVE ACCEPTED
+- Phase 19 — AUR and community launch: AUR CANDIDATE VERIFIED / ACCOUNT REGISTRATION BLOCKED
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -126,6 +127,7 @@ bash tests/test_shell_syntax.sh
 bash tests/run_phase13_gate.sh
 bash tests/run_phase17_7_closing_gate.sh
 bash tests/run_phase18_1_gate.sh
+bash tests/run_phase19_aur_gate.sh
 ```
 
 Some tests require an isolated HOME/XDG environment. If a test unexpectedly touches the developer's real environment, stop and inspect the test setup instead of adapting product behavior to the host machine.
