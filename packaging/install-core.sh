@@ -36,6 +36,7 @@ PREFIX="${PREFIX%/}"
 CORE_DIR="$PREFIX/lib/caelestia-webapps"
 BIN_DIR="$PREFIX/bin"
 APP_DIR="$PREFIX/share/applications"
+ICON_DIR="$PREFIX/share/icons/hicolor/scalable/apps"
 LICENSE_DIR="$PREFIX/share/licenses/caelestia-webapps"
 MANIFEST="$SOURCE_ROOT/packaging/runtime-entries.txt"
 VERSION="$(<"$SOURCE_ROOT/VERSION")"
@@ -44,7 +45,7 @@ VERSION="$(<"$SOURCE_ROOT/VERSION")"
 command -v python3 >/dev/null 2>&1 || { echo "python3 is required" >&2; exit 1; }
 command -v bash >/dev/null 2>&1 || { echo "bash is required" >&2; exit 1; }
 
-mkdir -p "$PREFIX/lib" "$BIN_DIR" "$APP_DIR" "$LICENSE_DIR"
+mkdir -p "$PREFIX/lib" "$BIN_DIR" "$APP_DIR" "$ICON_DIR" "$LICENSE_DIR"
 STAGE="$(mktemp -d "$PREFIX/lib/.caelestia-webapps.stage.XXXXXX")"
 OLD=""
 cleanup() {
@@ -123,6 +124,8 @@ write_wrapper "$CORE_DIR/bin/caelestia-webapps" "$BIN_DIR/caelestia-webapps" "CL
 write_wrapper "$CORE_DIR/manager.sh" "$BIN_DIR/caelestia-webapps-manager" "Manager"
 install -m 644 "$SOURCE_ROOT/packaging/caelestia-webapps-manager.desktop" \
     "$APP_DIR/caelestia-webapps-manager.desktop"
+install -m 644 "$SOURCE_ROOT/assets/branding/caelestia-webapps.svg" \
+    "$ICON_DIR/caelestia-webapps.svg"
 install -m 644 "$SOURCE_ROOT/LICENSE" "$LICENSE_DIR/LICENSE"
 
 printf '\nCaelestia WebApps core installed.\n'

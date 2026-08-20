@@ -1,6 +1,6 @@
 # Arch package for Caelestia WebApps.
 pkgname=caelestia-webapps
-pkgver=0.4.1
+pkgver=0.4.2
 pkgrel=1
 pkgdesc="Firefox-based WebApp manager for Hyprland and Caelestia"
 arch=('any')
@@ -24,5 +24,6 @@ package() {
   install -Dm755 "$src/packaging/arch/wrappers/caelestia-webapps"     "$pkgdir/usr/bin/caelestia-webapps"
   install -Dm755 "$src/packaging/arch/wrappers/caelestia-webapps-manager"     "$pkgdir/usr/bin/caelestia-webapps-manager"
   install -Dm644 "$src/packaging/caelestia-webapps-manager.desktop"     "$pkgdir/usr/share/applications/caelestia-webapps-manager.desktop"
+  install -Dm644 "$src/assets/branding/caelestia-webapps.svg"     "$pkgdir/usr/share/icons/hicolor/scalable/apps/caelestia-webapps.svg"
   install -Dm644 "$src/LICENSE"     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

@@ -1,4 +1,8 @@
-# Caelestia WebApps 0.4.1
+# Caelestia WebApps 0.4.2
+
+<p align="center">
+  <img src="assets/branding/caelestia-webapps.svg" width="168" alt="Caelestia WebApps logo">
+</p>
 
 [![Release](https://img.shields.io/github/v/release/psdl76/caelestia-shell-installer)](https://github.com/psdl76/caelestia-shell-installer/releases/latest)
 [![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue.svg)](LICENSE)
@@ -15,10 +19,10 @@ Caelestia Shell Nexus settings UI.
 > Caelestia WebApps is an unofficial community project. It is not affiliated
 > with or maintained by the Caelestia Shell or Hyprland projects.
 
-Release 0.4.1 adds accepted German/English localization to the Phase 16.8
-lifecycle and Phase 17.7 Manager baseline. Its real install/uninstall lifecycle
-has passed without a Hyprland monitor reload. The project is licensed under
-GPL-3.0-only.
+Release 0.4.2 adds the project-owned logo, scalable desktop icon and animated
+About hero to the accepted German/English Phase 16.8 lifecycle and Phase 17.7
+Manager baseline. Its real install/uninstall lifecycle has passed without a
+Hyprland monitor reload. The project is licensed under GPL-3.0-only.
 
 ## Highlights
 
@@ -42,9 +46,9 @@ Install the required software listed below, then download and install the
 current release into `~/.local`:
 
 ```bash
-curl -LO https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.1/caelestia-webapps-0.4.1.tar.gz
-tar -xzf caelestia-webapps-0.4.1.tar.gz
-cd caelestia-webapps-0.4.1
+curl -LO https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.2/caelestia-webapps-0.4.2.tar.gz
+tar -xzf caelestia-webapps-0.4.2.tar.gz
+cd caelestia-webapps-0.4.2
 ./packaging/install-core.sh
 ~/.local/bin/caelestia-webapps-manager
 ```
@@ -111,19 +115,19 @@ It includes the Phase 17 Manager suite, the 22-test Phase 16.8 lifecycle gate,
 shell syntax validation and the 17-test packaging/product gate. Destructive
 lifecycle tests run in disposable HOME/XDG environments.
 
-The local 0.4.1 release gate, including artifact builds, is:
+The local 0.4.2 release gate, including artifact builds, is:
 
 ```bash
-bash tests/run_release_0_4_1_gate.sh
+bash tests/run_release_0_4_2_gate.sh
 ```
 
 ## Packaging and licensing
 
-The project and packaged source are licensed under GPL-3.0-only. The desktop
-entry intentionally uses the generic `applications-internet` icon. The
-canonical repository is
+The project, packaged source and project-owned branding are licensed under
+GPL-3.0-only. The desktop entry uses the scalable `caelestia-webapps` project
+icon. The canonical repository is
 [psdl76/caelestia-shell-installer](https://github.com/psdl76/caelestia-shell-installer).
 
 See `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`,
 `docs/phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md` and
-`docs/releases/RELEASE_0.4.1.md` for the accepted baseline and release notes.
+`docs/releases/RELEASE_0.4.2.md` for the current release notes.

@@ -44,6 +44,7 @@ accepted and frozen Manager baseline.
 3. `phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`
 4. `phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md`
 5. `phases/phase-19/PHASE19_AUR_COMMUNITY_LAUNCH.md`
+6. `phases/phase-20/PHASE20_1_PRODUCT_BRANDING.md`
 
 Phase 18.1 adds German/English presentation without changing the frozen Phase
 17.7 layout or Phase 16.8 lifecycle contracts. Both language modes are live
@@ -55,8 +56,12 @@ Phase 19 contains presentation, AUR and community-launch work only. Its AUR
 candidate is locally verified, but publication remains blocked while new AUR
 account registration is unavailable.
 
+Phase 20.1 introduces the project-owned logo, desktop icon packaging and the
+Nexus-inspired animated About hero. Its graphical acceptance is complete.
+
 ## Current release
 
 - `releases/RELEASE_0.4.0.md` — local/private 0.4.0 release
-- `releases/RELEASE_0.4.1.md` — localized, locally verified 0.4.1 release
-- `releases/COMMUNITY_LAUNCH_0.4.1.md` — copy-ready community launch kit
+- `releases/RELEASE_0.4.1.md` — localized public 0.4.1 release
+- `releases/RELEASE_0.4.2.md` — project branding and animated About release
+- `releases/COMMUNITY_LAUNCH_0.4.2.md` — copy-ready community launch kit

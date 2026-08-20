@@ -13,6 +13,8 @@ grep -Fqx 'PACKAGE_ID=caelestia-webapps' "$PREFIX/lib/caelestia-webapps/PACKAGE-
 test -x "$PREFIX/bin/caelestia-webapps"
 test -x "$PREFIX/bin/caelestia-webapps-manager"
 test -f "$PREFIX/share/applications/caelestia-webapps-manager.desktop"
+grep -Fqx 'Icon=caelestia-webapps' "$PREFIX/share/applications/caelestia-webapps-manager.desktop"
+test -f "$PREFIX/share/icons/hicolor/scalable/apps/caelestia-webapps.svg"
 export HOME="$HOME_TEST"
 export XDG_CONFIG_HOME="$HOME/config"
 export XDG_DATA_HOME="$HOME/data"

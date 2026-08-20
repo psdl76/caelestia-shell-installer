@@ -37,6 +37,8 @@ The baseline represented by this workspace is:
 - Phase 18.2 — reload-free Hyprland Lua integration: LIVE ACCEPTED / FROZEN
 - Release 0.4.1 — localized package release: PUBLIC / LIVE ACCEPTED
 - Phase 19 — AUR and community launch: AUR CANDIDATE VERIFIED / ACCOUNT REGISTRATION BLOCKED
+- Phase 20.1 — product branding and animated About hero: LIVE ACCEPTED / FROZEN
+- Release 0.4.2 — branded package release: PUBLIC / LIVE ACCEPTED
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -128,6 +130,7 @@ bash tests/run_phase13_gate.sh
 bash tests/run_phase17_7_closing_gate.sh
 bash tests/run_phase18_1_gate.sh
 bash tests/run_phase19_aur_gate.sh
+python3 tests/test_phase20_1_product_branding.py
 ```
 
 Some tests require an isolated HOME/XDG environment. If a test unexpectedly touches the developer's real environment, stop and inspect the test setup instead of adapting product behavior to the host machine.
@@ -183,9 +186,9 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phases 16.8, 17.7, 18.1 and 18.2 are accepted and frozen. Release 0.4.0 remains the
-current local/private tagged release; 0.4.1 is locally verified and ready to tag.** Preserve the proven
-packaged lifecycle, the accepted localized Nexus-style Manager baseline and the
-standalone boundary from private Caelestia QML dependencies. The canonical
-repository is `https://github.com/psdl76/caelestia-shell-installer` and the
-redistribution license is GPL-3.0-only.
+**Phases 16.8, 17.7, 18.1, 18.2 and 20.1 are accepted and frozen. Release 0.4.1
+and 0.4.2 are public accepted releases.** Preserve the
+proven packaged lifecycle, the accepted localized Nexus-style Manager baseline
+and the standalone boundary from private Caelestia QML dependencies. The
+canonical repository is `https://github.com/psdl76/caelestia-shell-installer`
+and the redistribution license is GPL-3.0-only.

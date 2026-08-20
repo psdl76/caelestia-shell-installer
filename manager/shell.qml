@@ -1065,22 +1065,13 @@ ShellRoot {
                     anchors.rightMargin: 16
                     spacing: Style.Tokens.spaceLg
 
-                    Rectangle {
-                        implicitWidth: 34
-                        implicitHeight: 34
-                        radius: 17
-                        color: Style.Theme.categoryActive
-                        border.width: 1
-                        border.color: Style.Theme.categoryBorder
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "\ue30a"
-                            color: Style.Theme.primary
-                            font.family: "Material Symbols Rounded"
-                            font.pixelSize: 20
-                            font.weight: Font.Medium
-                        }
+                    Image {
+                        Layout.preferredWidth: 36
+                        Layout.preferredHeight: 36
+                        source: root.projectRoot + "/assets/branding/caelestia-webapps.svg"
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
                     }
 
                     ColumnLayout {
@@ -2152,13 +2143,12 @@ ShellRoot {
                                     anchors.centerIn: parent
                                     spacing: Style.Tokens.spaceSm
 
-                                    Text {
+                                    Style.AnimatedBrandLogo {
                                         Layout.alignment: Qt.AlignHCenter
-                                        text: "\ue30a"
-                                        color: Style.Theme.primary
-                                        font.family: "Material Symbols Rounded"
-                                        font.pixelSize: 72
-                                        font.weight: Font.Medium
+                                        Layout.preferredWidth: 112
+                                        Layout.preferredHeight: 112
+                                        source: root.projectRoot + "/assets/branding/caelestia-webapps.svg"
+                                        active: root.displayedMainPage === "about" && aboutPage.opacity > 0.99
                                     }
 
                                     Text {

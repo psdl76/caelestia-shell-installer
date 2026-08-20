@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 README = (ROOT / "README.md").read_text(encoding="utf-8")
 PHASE = (ROOT / "docs/phases/phase-19/PHASE19_AUR_COMMUNITY_LAUNCH.md").read_text(encoding="utf-8")
-LAUNCH = (ROOT / "docs/releases/COMMUNITY_LAUNCH_0.4.1.md").read_text(encoding="utf-8")
+LAUNCH = (ROOT / "docs/releases/COMMUNITY_LAUNCH_0.4.2.md").read_text(encoding="utf-8")
 
 assert "unofficial community project" in README
 assert "An AUR package named `caelestia-webapps` is being prepared." in README

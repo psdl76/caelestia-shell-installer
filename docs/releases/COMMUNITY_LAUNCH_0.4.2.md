@@ -1,4 +1,4 @@
-# Community launch kit — Caelestia WebApps 0.4.1
+# Community launch kit — Caelestia WebApps 0.4.2
 
 These texts are prepared for publication after the final checklist below is
 complete. Caelestia WebApps is always described as an unofficial community
@@ -41,8 +41,8 @@ Body:
 > Repository and screenshots:
 > https://github.com/psdl76/caelestia-shell-installer
 >
-> Release 0.4.1:
-> https://github.com/psdl76/caelestia-shell-installer/releases/tag/v0.4.1
+> Release 0.4.2:
+> https://github.com/psdl76/caelestia-shell-installer/releases/tag/v0.4.2
 >
 > Feedback about the workflow, UI consistency and useful WebApps is welcome.
 > This is not an official Caelestia component and is not maintained by the
@@ -50,7 +50,7 @@ Body:
 
 ## Caelestia Discord
 
-> I released **Caelestia WebApps 0.4.1**, an unofficial Firefox WebApp manager
+> I released **Caelestia WebApps 0.4.2**, an unofficial Firefox WebApp manager
 > for Hyprland with a Caelestia Nexus-inspired Quickshell UI. It supports
 > isolated profiles, install/repair/remove, user-defined apps, optional TopBar
 > applets and German/English UI. Install: `yay -S caelestia-webapps` — screenshots
@@ -58,7 +58,7 @@ Body:
 
 ## Hyprland community
 
-> I released **Caelestia WebApps 0.4.1**, an unofficial standalone Quickshell
+> I released **Caelestia WebApps 0.4.2**, an unofficial standalone Quickshell
 > manager for isolated Firefox WebApps on Hyprland. It manages desktop entries,
 > profiles and app-owned window rules, and current Hyprland Lua sessions receive
 > targeted runtime-rule updates without a full monitor reload. The interface is
@@ -71,7 +71,7 @@ Body:
 
 ## German CachyOS/Arch post
 
-> **Caelestia WebApps 0.4.1** ist ein inoffizieller, eigenständiger Manager für
+> **Caelestia WebApps 0.4.2** ist ein inoffizieller, eigenständiger Manager für
 > Firefox-basierte WebApps unter Hyprland. Die Quickshell-Oberfläche orientiert
 > sich am Caelestia-Nexus-Stil und bietet isolierte Profile, Installation,
 > Reparatur, Deinstallation, eigene WebApps, optionale TopBar-Applets sowie eine

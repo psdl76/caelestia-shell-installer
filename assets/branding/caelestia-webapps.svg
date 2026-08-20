@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Caelestia WebApps</title>
+  <desc id="desc">An open rounded portal with three emerging WebApp tiles</desc>
+  <defs>
+    <linearGradient id="portal" x1="150" y1="780" x2="680" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#092bd2"/>
+      <stop offset="0.48" stop-color="#5425e8"/>
+      <stop offset="1" stop-color="#b922f2"/>
+    </linearGradient>
+    <linearGradient id="violetTile" x1="390" y1="610" x2="560" y2="405" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5425d7"/>
+      <stop offset="1" stop-color="#652ce5"/>
+    </linearGradient>
+    <linearGradient id="cyanTile" x1="615" y1="620" x2="750" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#38a6c8"/>
+      <stop offset="1" stop-color="#4bb3d2"/>
+    </linearGradient>
+    <linearGradient id="mintTile" x1="750" y1="700" x2="900" y2="510" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#58dca9"/>
+      <stop offset="1" stop-color="#70e8b8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- The continuous open portal remains legible down to launcher sizes. -->
+  <path fill="url(#portal)" d="M681 361l-67-19v-22c0-31-25-55-56-55H268c-34 0-61 27-61 61v373c0 34 27 61 61 61h290c31 0 56-25 56-56v-28l67 22v11c0 65-53 118-118 118H263c-69 0-124-56-124-124V320c0-68 55-123 124-123h295c68 0 123 55 123 123z"/>
+
+  <!-- Three independent tiles represent WebApps managed by the portal. -->
+  <rect x="381" y="414" width="194" height="216" rx="28" fill="url(#violetTile)" transform="rotate(-15 478 522)"/>
+  <rect x="599" y="407" width="160" height="236" rx="28" fill="url(#cyanTile)" transform="rotate(17 679 525)"/>
+  <rect x="748" y="493" width="166" height="230" rx="29" fill="url(#mintTile)" transform="rotate(42 831 608)"/>
+</svg>

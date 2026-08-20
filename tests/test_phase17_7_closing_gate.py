@@ -15,8 +15,8 @@ for number in range(1, 8):
 for number in range(1, 8):
     assert f"Phase 17.{number}" in AGENTS
 assert "Phase 17.7 — Manager visual acceptance and closing gate: ACCEPTED / FROZEN" in AGENTS
-assert "Release 0.4.0" in AGENTS
-assert "local/private tagged release" in AGENTS
+assert "Release 0.4.1 — localized package release: PUBLIC / LIVE ACCEPTED" in AGENTS
+assert "Release 0.4.2 — branded package release: PUBLIC / LIVE ACCEPTED" in AGENTS
 
 # Closing regression found during the full packaging gate.
 assert "activeFocusOnTab: !root.actionBusy" in SHELL

@@ -11,13 +11,14 @@ metadata and community launch material only.
 ## Completed
 
 - public GitHub repository, v0.4.1 release and GPL-3.0-only license;
+- locally verified v0.4.2 branded release candidate;
 - final catalog and WebApp-info screenshots without private desktop content;
 - user-oriented README with an explicit unofficial-project notice;
 - GitHub discovery topics and Discussions;
 - AUR package base `caelestia-webapps` confirmed available;
 - AUR `PKGBUILD` and synchronized `.SRCINFO`;
 - source download, checksum and package layout verified from the public v0.4.1
-  release;
+  release and locally regenerated for v0.4.2;
 - clean Arch chroot build completed successfully with `extra-x86_64-build`;
 - the final `checkpkg` lookup was skipped because no repository package named
   `caelestia-webapps` exists yet; this does not invalidate the package build;
