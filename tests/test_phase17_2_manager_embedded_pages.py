@@ -8,16 +8,15 @@ QMLDIR = (STYLE / "qmldir").read_text(encoding="utf-8")
 DOC = ROOT / "docs/phases/phase-17/PHASE17_2_MANAGER_EMBEDDED_PAGES.md"
 
 assert 'property string mainPage: "catalog"' in SHELL
-assert 'root.mainPage = "actions"' in SHELL
-assert 'root.mainPage = "wizard"' in SHELL
-assert 'root.mainPage = "applet-settings"' in SHELL
+assert 'root.navigateMainPage("actions", 1)' in SHELL
+assert 'root.navigateMainPage("wizard", 1)' in SHELL
+assert 'root.navigateMainPage("applet-settings", 1)' in SHELL
 
 for page in ("wizard", "actions", "applet-settings"):
-    assert f'enabled: root.mainPage === "{page}"' in SHELL
-    assert f'root.mainPage === "{page}" ? 0 : Style.Tokens.space2xl' in SHELL
+    assert f'enabled: root.displayedMainPage === "{page}"' in SHELL
 
-assert SHELL.count("Behavior on opacity { Style.EffectAnimation {} }") >= 3
-assert SHELL.count("Behavior on x { Style.SpatialAnimation {} }") >= 3
+assert "id: mainPageSwitch" in SHELL
+assert "SequentialAnimation {" in SHELL
 assert SHELL.count('icon: "\\ue5c4"') >= 3
 assert SHELL.count("Flow {") >= 2
 

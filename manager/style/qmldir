@@ -10,3 +10,4 @@ SpatialAnimation 1.0 SpatialAnimation.qml
 EffectAnimation 1.0 EffectAnimation.qml
 WindowCloseDock 1.0 WindowCloseDock.qml
 SettingsAction 1.0 SettingsAction.qml
+SectionHeader 1.0 SectionHeader.qml

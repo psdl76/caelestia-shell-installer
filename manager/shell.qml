@@ -28,6 +28,11 @@ ShellRoot {
     property bool appletSettingsOpen: false
     property bool actionMenuOpen: false
     property string mainPage: "catalog"
+    property string displayedMainPage: "catalog"
+    property string pendingMainPage: "catalog"
+    property int mainPageDirection: 1
+    property string pendingCategory: "featured"
+    property int categoryDirection: 1
     property var actionMenuApp: null
     property var appletSettingsApp: null
     property var appletSettingsItems: []
@@ -167,19 +172,51 @@ ShellRoot {
 
     function selectCategory(id, direction) {
         if (root.mainPage !== "catalog") {
-            root.mainPage = "catalog"
             root.actionMenuOpen = false
             root.wizardOpen = false
             root.appletSettingsOpen = false
+            root.selectedCategory = id
+            root.pendingCategory = id
+            scroll.contentY = 0
+            root.navigateMainPage("catalog", -1)
+            return
         }
         if (root.selectedCategory === id)
             return
         contentSwitch.complete()
-        contentPane.opacity = 0
-        contentTranslate.y = (direction || 1) * Style.Tokens.space2xl
-        root.selectedCategory = id
-        scroll.contentY = 0
+        root.pendingCategory = id
+        root.categoryDirection = direction || 1
         contentSwitch.restart()
+    }
+
+    function pageItem(page) {
+        if (page === "wizard")
+            return wizardPage
+        if (page === "actions")
+            return actionPage
+        if (page === "applet-settings")
+            return appletSettingsPage
+        return catalogPage
+    }
+
+    function pageTranslate(page) {
+        if (page === "wizard")
+            return wizardPageTranslate
+        if (page === "actions")
+            return actionPageTranslate
+        if (page === "applet-settings")
+            return appletSettingsPageTranslate
+        return catalogPageTranslate
+    }
+
+    function navigateMainPage(page, direction) {
+        if (root.mainPage === page)
+            return
+        mainPageSwitch.complete()
+        root.mainPage = page
+        root.pendingMainPage = page
+        root.mainPageDirection = direction || 1
+        mainPageSwitch.restart()
     }
 
     function visibleApps() {
@@ -360,12 +397,12 @@ ShellRoot {
             return
         root.actionMenuApp = app
         root.actionMenuOpen = true
-        root.mainPage = "actions"
+        root.navigateMainPage("actions", 1)
     }
 
     function closeActionMenu() {
         root.actionMenuOpen = false
-        root.mainPage = "catalog"
+        root.navigateMainPage("catalog", -1)
     }
 
     function actionMenuEntries() {
@@ -374,15 +411,16 @@ ShellRoot {
             return []
         const entries = []
         if (app.installed === true && app.applet?.available === true && app.applet?.support === "supported")
-            entries.push({ id: "applet-settings", title: "Applet-Einstellungen", description: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", label: "Öffnen", danger: false })
+            entries.push({ id: "applet-settings", group: "Integration", title: "Applet-Einstellungen", description: "Funktionen wie Badge, Vorschau oder Wiedergabesteuerung konfigurieren.", label: "Öffnen", danger: false })
         if (app.installed === true) {
-            entries.push({ id: "setup", title: "Firefox-Profil & Berechtigungen", description: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", label: "Einrichten", danger: false })
-            entries.push({ id: "repair", title: "WebApp reparieren", description: "Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen.", label: "Reparieren", danger: false })
+            entries.push({ id: "setup", group: "Integration", title: "Firefox-Profil & Berechtigungen", description: "WebApp-Profil erneut einrichten und benötigte Firefox-Berechtigungen vorbereiten.", label: "Einrichten", danger: false })
+            entries.push({ id: "repair", group: "Verwaltung", title: "WebApp reparieren", description: "Installation prüfen und verwaltete Dateien sowie Metadaten erneut herstellen.", label: "Reparieren", danger: false })
         }
         if (app.source === "user")
-            entries.push({ id: "edit", title: "Eigene WebApp bearbeiten", description: "Name, URL, Kategorie und Icon der eigenen WebApp ändern.", label: "Bearbeiten", danger: false })
+            entries.push({ id: "edit", group: "Verwaltung", title: "Eigene WebApp bearbeiten", description: "Name, URL, Kategorie und Icon der eigenen WebApp ändern.", label: "Bearbeiten", danger: false })
         entries.push({
             id: "remove",
+            group: "Entfernen",
             title: app.installed === true ? "WebApp deinstallieren" : "Aus dem Katalog entfernen",
             description: app.installed === true ? "Die installierte WebApp nach einer Bestätigung entfernen." : "Diese eigene WebApp aus dem lokalen Katalog entfernen.",
             label: app.installed === true ? "Deinstallieren" : "Entfernen",
@@ -395,17 +433,21 @@ ShellRoot {
         const app = root.actionMenuApp
         if (!app || !entry)
             return
-        root.closeActionMenu()
-        if (entry.id === "applet-settings")
+        if (entry.id === "applet-settings") {
+            root.actionMenuOpen = false
             root.openAppletSettings(app)
-        else if (entry.id === "edit")
+        } else if (entry.id === "edit") {
+            root.actionMenuOpen = false
             root.openEditWizard(app)
-        else if (entry.id === "remove")
-            root.requestUninstall(app)
-        else if (entry.id === "setup")
-            root.runAction("setup", app)
-        else if (entry.id === "repair")
-            root.runAction("repair", app)
+        } else {
+            root.closeActionMenu()
+            if (entry.id === "remove")
+                root.requestUninstall(app)
+            else if (entry.id === "setup")
+                root.runAction("setup", app)
+            else if (entry.id === "repair")
+                root.runAction("repair", app)
+        }
     }
 
     function openAppletSettings(app) {
@@ -413,7 +455,7 @@ ShellRoot {
         root.appletSettingsItems = []
         root.appletSettingsError = ""
         root.appletSettingsOpen = true
-        root.mainPage = "applet-settings"
+        root.navigateMainPage("applet-settings", 1)
         root.appletSettingsBusy = true
         appletSettingsProcess.command = [root.projectRoot + "/bin/caelestia-webapps", "applet-settings", app.id]
         appletSettingsProcess.running = true
@@ -427,7 +469,7 @@ ShellRoot {
         root.appletSettingsError = ""
         root.actionMenuApp = root.appletSettingsApp
         root.actionMenuOpen = root.actionMenuApp !== null
-        root.mainPage = root.actionMenuOpen ? "actions" : "catalog"
+        root.navigateMainPage(root.actionMenuOpen ? "actions" : "catalog", -1)
     }
 
     function consumeAppletSettings(text) {
@@ -506,7 +548,7 @@ ShellRoot {
         root.wizardAutoIconId = ""
         root.wizardError = ""
         root.wizardOpen = true
-        root.mainPage = "wizard"
+        root.navigateMainPage("wizard", 1)
         wizardFocusTimer.restart()
     }
 
@@ -525,7 +567,7 @@ ShellRoot {
         root.wizardAutoIconId = app.id
         root.wizardError = ""
         root.wizardOpen = true
-        root.mainPage = "wizard"
+        root.navigateMainPage("wizard", 1)
         wizardFocusTimer.restart()
     }
 
@@ -536,9 +578,9 @@ ShellRoot {
         root.wizardError = ""
         if (root.wizardEditing && root.actionMenuApp) {
             root.actionMenuOpen = true
-            root.mainPage = "actions"
+            root.navigateMainPage("actions", -1)
         } else {
-            root.mainPage = "catalog"
+            root.navigateMainPage("catalog", -1)
         }
     }
 
@@ -673,7 +715,7 @@ ShellRoot {
                     root.wizardOpen = false
                     root.wizardError = ""
                     root.actionMenuOpen = false
-                    root.mainPage = "catalog"
+                    root.navigateMainPage("catalog", -1)
                 }
 
                 if ((expected === "uninstall" || expected === "uninstall-close")
@@ -1224,11 +1266,16 @@ ShellRoot {
                 }
 
                 Rectangle {
+                    id: catalogPage
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     radius: Style.Tokens.radiusMainSurface
                     color: Style.Theme.mainSurface
                     clip: true
+                    opacity: 1
+                    enabled: root.displayedMainPage === "catalog"
+
+                    transform: Translate { id: catalogPageTranslate }
 
                     ColumnLayout {
                         anchors.fill: parent
@@ -1499,10 +1546,39 @@ ShellRoot {
                         }
                     }
 
-                    ParallelAnimation {
+                    SequentialAnimation {
                         id: contentSwitch
-                        Style.EffectAnimation { target: contentPane; property: "opacity"; from: 0; to: 1 }
-                        Style.SpatialAnimation { target: contentTranslate; property: "y"; to: 0 }
+
+                        Style.EffectAnimation {
+                            target: contentPane
+                            property: "opacity"
+                            to: 0
+                            duration: Style.Tokens.motionQuick
+                        }
+
+                        ScriptAction {
+                            script: {
+                                root.selectedCategory = root.pendingCategory
+                                scroll.contentY = 0
+                                contentTranslate.y = root.categoryDirection * Style.Tokens.space2xl
+                            }
+                        }
+
+                        ParallelAnimation {
+                            Style.EffectAnimation {
+                                target: contentPane
+                                property: "opacity"
+                                from: 0
+                                to: 1
+                                duration: Style.Tokens.motionSlowEffects
+                            }
+                            Style.SpatialAnimation {
+                                target: contentTranslate
+                                property: "y"
+                                to: 0
+                                duration: Style.Tokens.motionSlowEffects
+                            }
+                        }
                     }
                 }
             }
@@ -1515,22 +1591,22 @@ ShellRoot {
             }
 
             Rectangle {
+                id: wizardPage
                 x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
                 y: 12
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.mainPage === "wizard"
-                opacity: enabled ? 1 : 0
+                enabled: root.displayedMainPage === "wizard"
+                opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
                 clip: true
                 z: enabled ? 60 : -1
 
-                Behavior on opacity { Style.EffectAnimation {} }
                 transform: Translate {
-                    x: root.mainPage === "wizard" ? 0 : Style.Tokens.space2xl
-                    Behavior on x { Style.SpatialAnimation {} }
+                    id: wizardPageTranslate
+                    x: 0
                 }
 
                 MouseArea {
@@ -1807,22 +1883,22 @@ ShellRoot {
             }
 
             Rectangle {
+                id: actionPage
                 x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
                 y: 12
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.mainPage === "actions"
-                opacity: enabled ? 1 : 0
+                enabled: root.displayedMainPage === "actions"
+                opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
                 clip: true
                 z: enabled ? 54 : -1
 
-                Behavior on opacity { Style.EffectAnimation {} }
                 transform: Translate {
-                    x: root.mainPage === "actions" ? 0 : Style.Tokens.space2xl
-                    Behavior on x { Style.SpatialAnimation {} }
+                    id: actionPageTranslate
+                    x: 0
                 }
 
                 MouseArea {
@@ -1889,18 +1965,33 @@ ShellRoot {
                             Repeater {
                                 model: root.actionMenuEntries()
 
-                                delegate: Style.SettingsAction {
+                                delegate: ColumnLayout {
                                     required property var modelData
                                     required property int index
+                                    readonly property var entries: root.actionMenuEntries()
+                                    readonly property bool firstInSection: index === 0 || entries[index - 1].group !== modelData.group
+                                    readonly property bool lastInSection: index === entries.length - 1 || entries[index + 1].group !== modelData.group
+
                                     Layout.fillWidth: true
-                                    title: modelData.title
-                                    description: modelData.description
-                                    actionLabel: modelData.label
-                                    danger: modelData.danger === true
-                                    interactive: !root.actionBusy
-                                    firstInGroup: index === 0
-                                    lastInGroup: index === root.actionMenuEntries().length - 1
-                                    onClicked: root.runActionMenuEntry(modelData)
+                                    spacing: Style.Tokens.spaceXs
+
+                                    Style.SectionHeader {
+                                        visible: parent.firstInSection
+                                        first: parent.index === 0
+                                        text: parent.modelData.group
+                                    }
+
+                                    Style.SettingsAction {
+                                        Layout.fillWidth: true
+                                        title: parent.modelData.title
+                                        description: parent.modelData.description
+                                        actionLabel: parent.modelData.label
+                                        danger: parent.modelData.danger === true
+                                        interactive: !root.actionBusy
+                                        firstInGroup: parent.firstInSection
+                                        lastInGroup: parent.lastInSection
+                                        onClicked: root.runActionMenuEntry(parent.modelData)
+                                    }
                                 }
                             }
                         }
@@ -1910,22 +2001,22 @@ ShellRoot {
             }
 
             Rectangle {
+                id: appletSettingsPage
                 x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
                 y: 12
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.mainPage === "applet-settings"
-                opacity: enabled ? 1 : 0
+                enabled: root.displayedMainPage === "applet-settings"
+                opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
                 clip: true
                 z: enabled ? 55 : -1
 
-                Behavior on opacity { Style.EffectAnimation {} }
                 transform: Translate {
-                    x: root.mainPage === "applet-settings" ? 0 : Style.Tokens.space2xl
-                    Behavior on x { Style.SpatialAnimation {} }
+                    id: appletSettingsPageTranslate
+                    x: 0
                 }
 
                 MouseArea {
@@ -2067,11 +2158,50 @@ ShellRoot {
                 }
             }
 
+            // Nexus StackPage equivalent: the outgoing page disappears first;
+            // only then is the route exchanged and the new page moved in.
+            SequentialAnimation {
+                id: mainPageSwitch
+
+                Style.EffectAnimation {
+                    target: root.pageItem(root.displayedMainPage)
+                    property: "opacity"
+                    to: 0
+                    duration: Style.Tokens.motionQuick
+                }
+
+                ScriptAction {
+                    script: {
+                        const incomingPage = root.pageItem(root.pendingMainPage)
+                        const incomingTranslate = root.pageTranslate(root.pendingMainPage)
+                        incomingPage.opacity = 0
+                        incomingTranslate.x = root.mainPageDirection * Style.Tokens.space2xl * 3
+                        root.displayedMainPage = root.pendingMainPage
+                    }
+                }
+
+                ParallelAnimation {
+                    Style.EffectAnimation {
+                        target: root.pageItem(root.displayedMainPage)
+                        property: "opacity"
+                        from: 0
+                        to: 1
+                        duration: Style.Tokens.motionSlowEffects
+                    }
+                    Style.SpatialAnimation {
+                        target: root.pageTranslate(root.displayedMainPage)
+                        property: "x"
+                        to: 0
+                        duration: Style.Tokens.motionSlowEffects
+                    }
+                }
+            }
+
             Rectangle {
                 anchors.fill: parent
                 visible: root.pendingUninstallApp !== null
                 color: Style.Theme.scrimSoft
-                z: 50
+                z: 200
 
                 MouseArea {
                     anchors.fill: parent

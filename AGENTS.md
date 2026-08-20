@@ -27,6 +27,7 @@ The baseline represented by this workspace is:
 - Phase 16.8 — end-to-end closing gate: ACCEPTED / FROZEN
 - Phase 17.1 — Manager Caelestia Nexus layout: IMPLEMENTATION CANDIDATE / WIP
 - Phase 17.2 — embedded animated Manager detail pages: IMPLEMENTATION CANDIDATE / WIP
+- Phase 17.3 — Nexus motion and connected action grouping: IMPLEMENTATION CANDIDATE / WIP
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
