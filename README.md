@@ -3,9 +3,9 @@
 Caelestia WebApps is a standalone manager for Firefox-based WebApps on
 Hyprland, visually aligned with the Caelestia Shell Nexus settings UI.
 
-Release candidate 0.4.1 adds accepted German/English localization to the Phase
-16.8 lifecycle and Phase 17.7 Manager baseline. It remains local/private until
-the real install/uninstall check passes and a repository URL and redistribution
+Release 0.4.1 adds accepted German/English localization to the Phase 16.8
+lifecycle and Phase 17.7 Manager baseline. Its real install/uninstall lifecycle
+has passed. It remains local/private until a repository URL and redistribution
 license have been selected.
 
 ## Features
@@ -68,7 +68,7 @@ It includes the Phase 17 Manager suite, the 22-test Phase 16.8 lifecycle gate,
 shell syntax validation and the 17-test packaging/product gate. Destructive
 lifecycle tests run in disposable HOME/XDG environments.
 
-The local 0.4.1 release-candidate gate, including artifact builds, is:
+The local 0.4.1 release gate, including artifact builds, is:
 
 ```bash
 bash tests/run_release_0_4_1_gate.sh

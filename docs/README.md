@@ -50,4 +50,4 @@ accepted and Phase 18.1 is frozen.
 ## Current release
 
 - `releases/RELEASE_0.4.0.md` — local/private 0.4.0 release
-- `releases/RELEASE_0.4.1.md` — localized 0.4.1 release candidate
+- `releases/RELEASE_0.4.1.md` — localized, locally verified 0.4.1 release

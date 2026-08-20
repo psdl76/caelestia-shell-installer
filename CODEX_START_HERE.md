@@ -19,7 +19,7 @@ Read in this order:
 
 Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 is the current
 local/private tagged release. Phase 18.1 German/English Manager localization is
-accepted and frozen; 0.4.1 is the current release candidate awaiting a real
-install/uninstall check. Do not alter the frozen CLI, lifecycle, applet,
-capability or Manager visual contracts without a demonstrated regression or a
-new explicit phase.
+accepted and frozen; 0.4.1 passed its real install/uninstall lifecycle and is
+ready to tag. Do not alter the frozen CLI, lifecycle, applet, capability or
+Manager visual contracts without a demonstrated regression or a new explicit
+phase.

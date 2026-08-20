@@ -36,4 +36,4 @@ bsdtar -tf "$PACKAGE" | grep -Fq 'usr/lib/caelestia-webapps/manager/style/I18n.q
     sha256sum -c SHA256SUMS
 )
 
-echo "PASS: Caelestia WebApps $VERSION local release candidate artifacts"
+echo "PASS: Caelestia WebApps $VERSION local release artifacts"
