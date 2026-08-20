@@ -7,7 +7,7 @@ OUT="${1:-$ROOT/dist/release-$VERSION}"
 TOP="caelestia-webapps-$VERSION"
 
 [[ "$VERSION" == "0.4.1" ]]
-bash "$ROOT/tests/run_phase18_1_gate.sh"
+bash "$ROOT/tests/run_phase18_2_gate.sh"
 python3 "$ROOT/tests/test_release_0_4_1.py"
 
 mkdir -p "$OUT"

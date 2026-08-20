@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/lib/hyprland_live.sh"
 [[ "${1:-}" == "--confirm-real-home" ]] || {
     echo "Refusing to modify the real HOME without --confirm-real-home" >&2
     exit 2
@@ -71,20 +72,38 @@ find "$HOME/.local/share/caelestia-webapps/apps" \
 restore_previous_state() {
     [[ "$RESTORED" -eq 0 ]] || return 0
     RESTORED=1
+    local lua_live=false
     set +e
+
+    if command -v hyprctl >/dev/null 2>&1 && hypr_lua_live_begin; then
+        lua_live=true
+    fi
 
     for target in "${target_paths[@]}"; do
         rm -rf -- "$target"
     done
     for relative in "${protected_paths[@]}"; do
         target="$HOME/$relative"
-        rm -rf -- "$target"
-        if [[ -e "$BACKUP/home/$relative" || -L "$BACKUP/home/$relative" ]]; then
+        saved="$BACKUP/home/$relative"
+        if [[ -f "$saved" && ! -L "$saved" ]]; then
+            # Imported Lua files must never disappear between unlink and copy:
+            # Hyprland could reload in that window and enter emergency mode.
             mkdir -p "$(dirname -- "$target")"
-            cp -a -- "$BACKUP/home/$relative" "$target"
+            restore_tmp="${target}.caelestia-restore.$$"
+            rm -f -- "$restore_tmp"
+            cp -a -- "$saved" "$restore_tmp"
+            mv -f -- "$restore_tmp" "$target"
+        else
+            rm -rf -- "$target"
+            if [[ -e "$saved" || -L "$saved" ]]; then
+                mkdir -p "$(dirname -- "$target")"
+                cp -a -- "$saved" "$target"
+            fi
         fi
     done
-    if command -v hyprctl >/dev/null 2>&1; then
+    if [[ "$lua_live" == true ]]; then
+        hypr_lua_live_finish || true
+    elif command -v hyprctl >/dev/null 2>&1; then
         hyprctl reload >/dev/null 2>&1 || true
     fi
     set -e

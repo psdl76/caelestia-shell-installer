@@ -9,6 +9,7 @@ source "$LIB_DIR/app_definitions.sh"
 source "$LIB_DIR/ownership.sh"
 source "$LIB_DIR/locking.sh"
 source "$LIB_DIR/app_schema.sh"
+source "$LIB_DIR/hyprland_live.sh"
 trap on_error ERR
 
 [[ $# -eq 1 ]] || { echo "Verwendung: $0 <app-id>"; exit 2; }
@@ -52,6 +53,7 @@ TMP_RULES="$TX_DIR/rules.lua"
 TMP_KEYBINDS="$TX_DIR/keybinds.lua"
 RULES_CHANGED=false
 KEYBINDS_CHANGED=false
+SHARED_RUNTIME_REMOVED=false
 
 [[ -f "$HYPR_RULES_FILE" ]] && cp -- "$HYPR_RULES_FILE" "$TMP_RULES"
 [[ -f "$HYPR_KEYBINDS_FILE" ]] && cp -- "$HYPR_KEYBINDS_FILE" "$TMP_KEYBINDS"
@@ -86,6 +88,7 @@ if [[ -f "$TMP_RULES" && -n "${HYPR_SHARED_TAG:-}" ]]; then
     # (e.g. communication_app_tag) are never removed by this project.
     if [[ "${HYPR_SHARED_OWNER:-}" == "caelestia-webapps" ]] \
        && ! other_installed_app_uses_shared_tag "$HYPR_SHARED_TAG"; then
+        SHARED_RUNTIME_REMOVED=true
         info "Keine weitere WebApp benötigt $HYPR_SHARED_TAG"
         if remove_project_owned_tagged_rule_tmp "$TMP_RULES" "$HYPR_SHARED_TAG" "${HYPR_SHARED_RULE_MARKER:-}"; then RULES_CHANGED=true; fi
         if remove_exact_managed_line_from_tmp "$TMP_RULES" "${HYPR_SHARED_CREATE_TAG:-}"; then RULES_CHANGED=true; fi
@@ -109,22 +112,39 @@ ok "Temporäre Deinstallationskonfiguration geprüft"
 
 # ---------------------------------------------------------------------------
 # Phase B: commit the validated configuration once, with exactly one backup
-# per changed live file. Hyprland is reloaded before app data is destroyed.
+# per changed live file. Current Lua sessions receive targeted runtime updates;
+# older configurations retain the validated full-reload fallback.
 # ---------------------------------------------------------------------------
 step "Validierte Hyprland-Änderungen übernehmen"
+LUA_LIVE=false
+if [[ "$RULES_CHANGED" == true || "$KEYBINDS_CHANGED" == true ]] && hypr_lua_live_begin; then
+    LUA_LIVE=true
+    info "Hyprland-Lua-Regeln werden ohne vollständigen Konfigurationsreload entfernt"
+fi
 if [[ "$RULES_CHANGED" == true ]]; then
     backup_file "$HYPR_RULES_FILE"
-    install -m 644 "$TMP_RULES" "$HYPR_RULES_FILE" || die "rules.lua konnte nicht aktualisiert werden."
+    if ! install -m 644 "$TMP_RULES" "$HYPR_RULES_FILE"; then
+        [[ "$LUA_LIVE" == true ]] && hypr_lua_live_finish || true
+        die "rules.lua konnte nicht aktualisiert werden."
+    fi
     ok "rules.lua aktualisiert"
 fi
 if [[ "$KEYBINDS_CHANGED" == true ]]; then
     backup_file "$HYPR_KEYBINDS_FILE"
-    install -m 644 "$TMP_KEYBINDS" "$HYPR_KEYBINDS_FILE" || die "keybinds.lua konnte nicht aktualisiert werden."
+    if ! install -m 644 "$TMP_KEYBINDS" "$HYPR_KEYBINDS_FILE"; then
+        [[ "$LUA_LIVE" == true ]] && hypr_lua_live_finish || true
+        die "keybinds.lua konnte nicht aktualisiert werden."
+    fi
     ok "keybinds.lua aktualisiert"
 fi
 
 if [[ "$RULES_CHANGED" == true || "$KEYBINDS_CHANGED" == true ]]; then
-    if command -v hyprctl >/dev/null 2>&1; then
+    if [[ "$LUA_LIVE" == true ]]; then
+        hypr_lua_disable_app_rules
+        [[ "$SHARED_RUNTIME_REMOVED" == true ]] && hypr_lua_disable_project_shared_runtime
+        hypr_lua_live_finish || die "Hyprland-Autoreload konnte nicht sicher wiederhergestellt werden."
+        ok "Hyprland-Regeln ohne Monitor-Reload entfernt"
+    elif command -v hyprctl >/dev/null 2>&1; then
         hyprctl reload >/dev/null || die "hyprctl reload ist fehlgeschlagen."
         errors="$(hyprctl configerrors 2>&1 || true)"
         if [[ -n "$errors" && "$errors" != "no errors" && "$errors" != *"No errors"* ]]; then

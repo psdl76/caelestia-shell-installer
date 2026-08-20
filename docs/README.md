@@ -42,10 +42,13 @@ accepted and frozen Manager baseline.
 1. `../AGENTS.md`
 2. `phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
 3. `phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`
+4. `phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md`
 
 Phase 18.1 adds German/English presentation without changing the frozen Phase
 17.7 layout or Phase 16.8 lifecycle contracts. Both language modes are live
-accepted and Phase 18.1 is frozen.
+accepted and Phase 18.1 is frozen. Phase 18.2 prevents full monitor reloads for
+app lifecycle changes on current Hyprland Lua configurations and is also live
+accepted and frozen.
 
 ## Current release
 

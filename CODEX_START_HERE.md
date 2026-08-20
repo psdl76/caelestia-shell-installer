@@ -16,10 +16,12 @@ Read in this order:
 10. `docs/phases/phase-17/PHASE17_6_ABOUT_PAGE.md`
 11. `docs/phases/phase-17/PHASE17_7_VISUAL_ACCEPTANCE_CLOSING_GATE.md`
 12. `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`
+13. `docs/phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md`
 
 Phases 16.8 and 17.7 are accepted and frozen. Release 0.4.0 is the current
-local/private tagged release. Phase 18.1 German/English Manager localization is
-accepted and frozen; 0.4.1 passed its real install/uninstall lifecycle and is
+local/private tagged release. Phase 18.1 German/English Manager localization and
+Phase 18.2 reload-free Hyprland Lua integration are accepted and frozen; 0.4.1
+passed its real install/uninstall lifecycle without a monitor modeset and is
 ready to tag. Do not alter the frozen CLI, lifecycle, applet, capability or
 Manager visual contracts without a demonstrated regression or a new explicit
 phase.

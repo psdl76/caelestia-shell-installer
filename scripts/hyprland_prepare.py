@@ -98,7 +98,7 @@ def prepare_rules(path, category, klass, app_name, use_opaque):
         text=add_member(text,'communication_app_tag',klass,app_name,'Messaging','native')
         if 'create_tag(communication_app_tag' not in text:
             warn('Native create_tag(communication_app_tag, ...) fehlt; vorhandene Caelestia-Konfiguration wird nicht ersetzt.')
-    elif category == 'streaming':
+    elif category in {'video', 'music'}:
         exact_decl='local streaming_app_tag = "streaming_app" -- Caelestia WebApps'
         text=ensure_after_line(
             text,
@@ -127,7 +127,7 @@ def literal_super_y_lines(text):
 
 def prepare_keybinds(path, category):
     if not path or not Path(path).exists():
-        if category == 'streaming': warn('keybinds.lua fehlt; SUPER+Y kann nicht verwaltet werden.')
+        if category in {'video', 'music'}: warn('keybinds.lua fehlt; SUPER+Y kann nicht verwaltet werden.')
         return
     p=Path(path); text=p.read_text(encoding='utf-8')
     if 'create_bind(vars.kbMusicWs, fn.toggle("music"))' in text:
@@ -138,7 +138,7 @@ def prepare_keybinds(path, category):
         info('Native Kommunikations-Workspace-Bindung vorhanden (SUPER+D über Caelestia vars).')
     else:
         warn('Native Kommunikations-Workspace-Bindung wurde nicht gefunden; SUPER+D wird nicht verändert.')
-    if category != 'streaming':
+    if category not in {'video', 'music'}:
         p.write_text(text,encoding='utf-8'); return
     managed_y='create_bind("SUPER + Y", fn.toggle("streaming")) -- Caelestia WebApps: Streaming'
     managed_v='create_bind("SUPER + V", fn.toggle("streaming")) -- Caelestia WebApps: Streaming'

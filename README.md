@@ -5,8 +5,8 @@ Hyprland, visually aligned with the Caelestia Shell Nexus settings UI.
 
 Release 0.4.1 adds accepted German/English localization to the Phase 16.8
 lifecycle and Phase 17.7 Manager baseline. Its real install/uninstall lifecycle
-has passed. It remains local/private until a repository URL and redistribution
-license have been selected.
+has passed without a Hyprland monitor reload. The project is licensed under
+GPL-3.0-only.
 
 ## Features
 
@@ -19,7 +19,8 @@ license have been selected.
 - keyboard navigation, live runtime state and Caelestia-derived public palette
   bridge without private Caelestia QML imports.
 - automatic German/English Manager localization with an explicit language
-  override.
+  override;
+- reload-free app rule updates for current Hyprland Lua configurations.
 
 ## Requirements
 
@@ -61,7 +62,7 @@ CAELESTIA_WEBAPPS_LANGUAGE=en ./manager.sh
 The complete accepted product gate is:
 
 ```bash
-bash tests/run_phase17_7_closing_gate.sh
+bash tests/run_phase18_2_gate.sh
 ```
 
 It includes the Phase 17 Manager suite, the 22-test Phase 16.8 lifecycle gate,
@@ -76,10 +77,10 @@ bash tests/run_release_0_4_1_gate.sh
 
 ## Packaging and licensing
 
-The runtime source archive and Arch package are suitable for local/private use.
-The desktop entry intentionally uses the generic `applications-internet` icon.
-Before public redistribution, replace the placeholder package URL and select an
-explicit project license; see `packaging/LICENSE-PENDING.txt`.
+The project and packaged source are licensed under GPL-3.0-only. The desktop
+entry intentionally uses the generic `applications-internet` icon. The package
+URL will be set to the canonical GitHub repository before publication.
 
-See `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md` and
-`docs/releases/RELEASE_0.4.1.md` for the accepted baseline and candidate notes.
+See `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`,
+`docs/phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md` and
+`docs/releases/RELEASE_0.4.1.md` for the accepted baseline and release notes.

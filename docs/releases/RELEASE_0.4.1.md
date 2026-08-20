@@ -1,6 +1,6 @@
 # Caelestia WebApps 0.4.1
 
-Status: **LOCAL / PRIVATE RELEASE — VERIFIED**
+Status: **LOCAL RELEASE CANDIDATE — VERIFIED / REMOTE PENDING**
 Date: **2026-08-20**
 
 ## Changes since 0.4.0
@@ -11,6 +11,10 @@ Date: **2026-08-20**
   settings, add/edit wizard, confirmation flow and About page.
 - English built-in descriptions reuse Catalog v2 `genericName`; user content is
   preserved verbatim and the frozen catalog schema remains unchanged.
+- Current Hyprland Lua sessions persist and activate app rules without a full
+  configuration reload or monitor modeset.
+- Real-test rollback replaces imported Lua files atomically and cannot expose a
+  temporarily missing `hyprland.keybinds` module.
 
 ## Validation
 
@@ -20,14 +24,16 @@ Date: **2026-08-20**
 - German live Manager acceptance: passed by the user.
 - Real rootless Core 0.4.1 install and uninstall: passed.
 - Real temporary WebApp create/install/status/uninstall/delete: passed.
+- Reload-free real lifecycle: zero new DP-3 modesets; display remained stable.
+- Hyprland after restore: no config errors and 143 keybinds loaded.
 - The previous Core version, persistent state and all six existing WebApps were
   restored and verified after the test; no temporary artifacts remained.
 
 ## Publication boundary
 
-This remains a local/private release. No Git remote is configured and the
-project still carries `packaging/LICENSE-PENDING.txt`. Select a redistribution
-license and canonical repository URL before public upload.
+The project is licensed under GPL-3.0-only. No Git remote is configured yet;
+the canonical repository URL must be written into the package metadata before
+public upload.
 
 The real-home test is intentionally manual and requires an explicit safety
 argument:

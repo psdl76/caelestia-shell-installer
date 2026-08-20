@@ -12,12 +12,14 @@ assert VERSION == "0.4.1"
 assert README.startswith("# Caelestia WebApps 0.4.1\n")
 assert "CAELESTIA_WEBAPPS_LANGUAGE=de" in README
 assert "CAELESTIA_WEBAPPS_LANGUAGE=en" in README
-assert "LOCAL / PRIVATE RELEASE — VERIFIED" in RELEASE
+assert "LOCAL RELEASE CANDIDATE — VERIFIED / REMOTE PENDING" in RELEASE
 assert "Real rootless Core 0.4.1 install and uninstall: passed" in RELEASE
 assert "Real temporary WebApp create/install/status/uninstall/delete: passed" in RELEASE
 assert "Status: **ACCEPTED / FROZEN**" in PHASE
 assert "English live Manager acceptance" in RELEASE
 assert "German live Manager acceptance" in RELEASE
+assert "zero new DP-3 modesets" in RELEASE
+assert 'run_phase18_2_gate.sh' in (ROOT / "tests/run_release_0_4_1_gate.sh").read_text(encoding="utf-8")
 
 manual_gate = ROOT / "tests/manual_real_release_0_4_1_lifecycle.sh"
 assert manual_gate.is_file()
@@ -25,6 +27,8 @@ assert manual_gate.stat().st_mode & 0o111
 manual_text = manual_gate.read_text(encoding="utf-8")
 assert "--confirm-real-home" in manual_text
 assert "restore_previous_state" in manual_text
+assert 'mv -f -- "$restore_tmp" "$target"' in manual_text
+assert 'rm -rf -- "$target"\n            if [[ -e "$saved"' in manual_text
 
 for name in ("make-runtime-tarball.sh", "build-arch-package.sh"):
     script = ROOT / "packaging" / name
@@ -36,7 +40,9 @@ assert 'VERSION="$(<"$ROOT/VERSION")"' in (ROOT / "packaging/build-arch-package.
 assert "pkgver=0.4.1" in PKGBUILD
 assert 'url=""' in PKGBUILD
 assert "OWNER" not in PKGBUILD
-assert "LICENSE-PENDING" in PKGBUILD
+assert "license=('GPL-3.0-only')" in PKGBUILD
+assert 'usr/share/licenses/$pkgname/LICENSE' in PKGBUILD
+assert (ROOT / "LICENSE").read_text(encoding="utf-8").startswith("GNU GENERAL PUBLIC LICENSE\n")
 assert "cp -a --no-preserve=ownership" in PKGBUILD
 
 print("PASS: release 0.4.1 verified metadata and packaging helpers")
