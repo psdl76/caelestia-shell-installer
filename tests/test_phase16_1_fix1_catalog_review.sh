@@ -14,8 +14,9 @@ assert len(catalog['apps']) == 79
 assert any(a['featured'] for a in catalog['apps'])
 assert 'property string selectedCategory: "featured"' in qml
 assert '{ id: "featured", label: "Featured" }' in qml
-assert 'Flickable.HorizontalFlick' in qml
-assert 'WheelHandler {' in qml
+assert 'id: navigationScroll' in qml
+assert 'Style.NavigationItem {' in qml
+assert 'contentHeight: navigationColumn.implicitHeight' in qml
 assert 'app.categories || [app.category]' in qml
 assert 'if (app.source === "user" && (app.iconUrl ?? "").length > 0)' in qml
 # Remote icon URLs are user-app-only; built-ins use local store/local fallback.
@@ -29,4 +30,4 @@ for app in catalog['apps']:
     assert app['category'] in app['categories']
 PY
 
-echo "PASS: Phase16.1-fix1 catalog review UX, descriptions, icons, featured and multi-category contract"
+echo "PASS: Phase16.1-fix1 catalog data/featured contract preserved in Phase17 navigation"

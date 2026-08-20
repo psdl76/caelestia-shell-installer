@@ -25,14 +25,19 @@ The baseline represented by this workspace is:
 - Phase 16.6 — capability settings: functionally accepted; UI baseline intentionally reset to `phase16-6-fix1-manager-more-actions`
 - Phase 16.7 — repair/upgrade/migration: LIVE ACCEPTED / FROZEN
 - Phase 16.8 — end-to-end closing gate: ACCEPTED / FROZEN
+- Phase 17.1 — Manager Caelestia Nexus layout: IMPLEMENTATION CANDIDATE / WIP
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
 ## Critical UI baseline rule
 
-The accepted Manager UI baseline is **Phase 16.6 fix1 — Manager More Actions**.
+The frozen Phase-16 Manager UI baseline is **Phase 16.6 fix1 — Manager More Actions**.
 
-Do not reintroduce the abandoned UI experiments from later Phase 16.6 fixes (surface-alignment / unified-design / connected-row / motion-controls / select-popouts / SplitButton experiments) unless the user explicitly asks to revisit them.
+Phase 17 explicitly supersedes its top-level toolbar/catalog layout with a
+Caelestia-Nexus-inspired sidebar and main screen. The Phase 16 More Actions
+boundary and all CLI/runtime behavior remain frozen.
+
+Do not reintroduce the abandoned UI experiments from later Phase 16.6 fixes (surface-alignment / unified-design / connected-row / motion-controls / select-popouts / SplitButton experiments). Phase 17 is a new visual contract based specifically on the live Caelestia Nexus settings UI, not a revival of those patches.
 
 The current task for Phase 16.8 is integration verification, not UI redesign.
 
@@ -163,4 +168,4 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phase 16.8 End-to-End is accepted and frozen.** Preserve the proven packaged lifecycle and do not add features or reopen frozen Phase 16 behavior without a demonstrated regression.
+**Phase 16.8 End-to-End is accepted and frozen.** The active goal is Phase 17.1 Manager visual alignment. Preserve the proven packaged lifecycle and keep private Caelestia QML dependencies out of the standalone Manager.

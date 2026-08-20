@@ -19,3 +19,12 @@ Start with the repository root `AGENTS.md` and `README.md`.
 5. relevant files under `contracts/`
 
 The later abandoned Phase 16.6 UI experiments are intentionally not part of this workspace baseline; the accepted visual starting point remains fix1.
+
+## Current reading order for Phase 17.1
+
+1. `../AGENTS.md`
+2. `phases/phase-16/PHASE16_8_END_TO_END.md`
+3. `phases/phase-17/PHASE17_1_MANAGER_NEXUS_LAYOUT.md`
+
+Phase 17.1 changes only the Manager's visual/layout contract. Phase 16.8 remains
+the frozen backend, runtime and packaged-lifecycle baseline.
