@@ -39,6 +39,7 @@ The baseline represented by this workspace is:
 - Phase 19 — AUR and community launch: AUR CANDIDATE VERIFIED / ACCOUNT REGISTRATION BLOCKED
 - Phase 20.1 — product branding and animated About hero: LIVE ACCEPTED / FROZEN
 - Release 0.4.2 — branded package release: PUBLIC / LIVE ACCEPTED
+- Release 0.4.3 — stability and packaging hardening: PUBLIC / LIVE ACCEPTED
 
 Do not reopen a frozen phase unless a real regression is demonstrated by a failing contract, failing regression test, or reproducible live bug.
 
@@ -186,8 +187,8 @@ Historical documents explain why the current implementation exists. They are not
 
 ## Goal
 
-**Phases 16.8, 17.7, 18.1, 18.2 and 20.1 are accepted and frozen. Release 0.4.1
-and 0.4.2 are public accepted releases.** Preserve the
+**Phases 16.8, 17.7, 18.1, 18.2 and 20.1 are accepted and frozen. Releases
+0.4.1, 0.4.2 and 0.4.3 are public accepted releases.** Preserve the
 proven packaged lifecycle, the accepted localized Nexus-style Manager baseline
 and the standalone boundary from private Caelestia QML dependencies. The
 canonical repository is `https://github.com/psdl76/caelestia-shell-installer`

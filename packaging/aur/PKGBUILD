@@ -1,6 +1,6 @@
 # Maintainer: psdl76
 pkgname=caelestia-webapps
-pkgver=0.4.2
+pkgver=0.4.3
 pkgrel=1
 pkgdesc="Unofficial Firefox WebApp manager for Hyprland and Caelestia-style desktops"
 arch=('any')
@@ -12,7 +12,7 @@ optdepends=(
   'gtk-update-icon-cache: refresh the hicolor icon cache for installed WebApps'
 )
 source=("$pkgname-$pkgver.tar.gz::$url/releases/download/v$pkgver/$pkgname-$pkgver.tar.gz")
-sha256sums=('66c6dfa140dde3250362225454ac8c7feca87c17b6302ac3f64ef98babb6f27f')
+sha256sums=('2709d273bc79d1c61891a77cfb9aa778796336fecde8198f4bc0cc2f3a6c8cc0')
 
 package() {
   local src="$srcdir/$pkgname-$pkgver"

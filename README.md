@@ -1,4 +1,4 @@
-# Caelestia WebApps 0.4.2
+# Caelestia WebApps 0.4.3
 
 <p align="center">
   <img src="assets/branding/caelestia-webapps.svg" width="168" alt="Caelestia WebApps logo">
@@ -19,10 +19,11 @@ Caelestia Shell Nexus settings UI.
 > Caelestia WebApps is an unofficial community project. It is not affiliated
 > with or maintained by the Caelestia Shell or Hyprland projects.
 
-Release 0.4.2 adds the project-owned logo, scalable desktop icon and animated
-About hero to the accepted German/English Phase 16.8 lifecycle and Phase 17.7
-Manager baseline. Its real install/uninstall lifecycle has passed without a
-Hyprland monitor reload. The project is licensed under GPL-3.0-only.
+Release 0.4.3 is a focused stability update for the accepted German/English
+Manager and lifecycle baseline. It hardens atomic Hyprland configuration
+updates, lifecycle conflict handling and reproducible release packaging while
+preserving the standalone public-API boundary. The project is licensed under
+GPL-3.0-only.
 
 ## Highlights
 
@@ -46,9 +47,9 @@ Install the required software listed below, then download and install the
 current release into `~/.local`:
 
 ```bash
-curl -LO https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.2/caelestia-webapps-0.4.2.tar.gz
-tar -xzf caelestia-webapps-0.4.2.tar.gz
-cd caelestia-webapps-0.4.2
+curl -LO https://github.com/psdl76/caelestia-shell-installer/releases/download/v0.4.3/caelestia-webapps-0.4.3.tar.gz
+tar -xzf caelestia-webapps-0.4.3.tar.gz
+cd caelestia-webapps-0.4.3
 ./packaging/install-core.sh
 ~/.local/bin/caelestia-webapps-manager
 ```
@@ -111,14 +112,15 @@ The complete accepted product gate is:
 bash tests/run_phase18_2_gate.sh
 ```
 
-It includes the Phase 17 Manager suite, the 22-test Phase 16.8 lifecycle gate,
+It includes the Phase 17 Manager suite, the 25-test Phase 16.8 lifecycle gate,
 shell syntax validation and the 17-test packaging/product gate. Destructive
 lifecycle tests run in disposable HOME/XDG environments.
 
-The local 0.4.2 release gate, including artifact builds, is:
+The local 0.4.3 release gate, including reproducible artifact builds and a
+rootless install/uninstall from the extracted release archive, is:
 
 ```bash
-bash tests/run_release_0_4_2_gate.sh
+bash tests/run_release_0_4_3_gate.sh
 ```
 
 ## Packaging and licensing
@@ -130,4 +132,4 @@ icon. The canonical repository is
 
 See `docs/phases/phase-18/PHASE18_1_MANAGER_LOCALIZATION.md`,
 `docs/phases/phase-18/PHASE18_2_RELOAD_FREE_HYPRLAND.md` and
-`docs/releases/RELEASE_0.4.2.md` for the current release notes.
+`docs/releases/RELEASE_0.4.3.md` for the current release notes.

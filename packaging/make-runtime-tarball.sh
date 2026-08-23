@@ -4,6 +4,11 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-$(<"$ROOT/VERSION")}"
 OUT="${2:-$ROOT/dist}"
 NAME="caelestia-webapps-$VERSION"
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
+[[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]] || {
+    echo "SOURCE_DATE_EPOCH must be a non-negative integer" >&2
+    exit 2
+}
 mkdir -p "$OUT"
 TMP="$(mktemp -d)"
 GATE_TMP=""
@@ -32,5 +37,16 @@ done < "$ROOT/packaging/runtime-entries.txt"
 mkdir -p "$TMP/$NAME/packaging/arch/wrappers"
 cp -a "$ROOT/packaging/arch/wrappers/." "$TMP/$NAME/packaging/arch/wrappers/"
 cp -a "$ROOT/packaging/caelestia-webapps-manager.desktop" "$TMP/$NAME/packaging/"
-tar -C "$TMP" -czf "$OUT/$NAME.tar.gz" "$NAME"
+cp -a "$ROOT/packaging/install-core.sh" "$TMP/$NAME/packaging/"
+cp -a "$ROOT/packaging/uninstall-core.sh" "$TMP/$NAME/packaging/"
+cp -a "$ROOT/packaging/runtime-entries.txt" "$TMP/$NAME/packaging/"
+LC_ALL=C tar \
+    --sort=name \
+    --mtime="@$SOURCE_DATE_EPOCH" \
+    --owner=0 \
+    --group=0 \
+    --numeric-owner \
+    -C "$TMP" \
+    -czf "$OUT/$NAME.tar.gz" \
+    "$NAME"
 printf '%s\n' "$OUT/$NAME.tar.gz"

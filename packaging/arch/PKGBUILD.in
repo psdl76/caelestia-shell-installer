@@ -1,6 +1,6 @@
 # Arch package for Caelestia WebApps.
 pkgname=caelestia-webapps
-pkgver=0.4.2
+pkgver=0.4.3
 pkgrel=1
 pkgdesc="Firefox-based WebApp manager for Hyprland and Caelestia"
 arch=('any')
