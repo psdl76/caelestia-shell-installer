@@ -40,6 +40,7 @@ INSTALL_SCRIPT = ROOT / "install.sh"
 REPAIR_SCRIPT = ROOT / "repair.sh"
 UNINSTALL_SCRIPT = ROOT / "uninstall.sh"
 USER_APPS_TOOL = ROOT / "scripts/user_apps.py"
+USER_CATEGORIES_TOOL = ROOT / "scripts/user_categories.py"
 NOTIFICATION_WATCH_TOOL = ROOT / "scripts/notification_watch.py"
 DEFINITION_VALIDATOR = ROOT / "scripts/validate_definitions.py"
 APPLET_REGISTRY_GENERATOR = ROOT / "scripts/generate_applet_registry.py"
@@ -48,6 +49,12 @@ APPLET_IMPLEMENTATION_VALIDATOR = ROOT / "scripts/validate_applet_implementation
 APPLET_RUNTIME_SOURCE_VALIDATOR = ROOT / "scripts/validate_applet_runtime_sources.py"
 CATALOG_FILE = Path.home() / ".local/share/caelestia-webapps/catalog.json"
 APPLET_REGISTRY_FILE = Path.home() / ".local/share/caelestia-webapps/applet-registry.json"
+
+sys.path.insert(0, str(ROOT / "scripts"))
+from category_store import CategoryError, load_builtin_categories, load_user_categories, merged_categories, user_category_file
+from user_categories import category_references
+
+USER_CATEGORY_FILE = user_category_file()
 
 
 def _lock_path() -> Path:
@@ -241,11 +248,42 @@ def _parse_installed_conf(path: Path) -> dict[str, str] | None:
 
 def _category_ids() -> set[str]:
     try:
-        payload = json.loads((ROOT / "config/categories.json").read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        return set(merged_categories(ROOT / "config/categories.json", USER_CATEGORY_FILE))
+    except CategoryError:
         return set()
-    categories = payload.get("categories", {})
-    return set(categories) if isinstance(categories, dict) else set()
+
+
+def available_categories(catalog: dict[str, Any]) -> list[dict[str, Any]]:
+    builtins = load_builtin_categories(ROOT / "config/categories.json")
+    users = load_user_categories(USER_CATEGORY_FILE)
+    counts = {
+        str(item.get("id")): int(item.get("count", 0))
+        for item in catalog.get("categories", [])
+        if isinstance(item, dict) and item.get("id")
+    }
+    result: list[dict[str, Any]] = []
+    for category_id, value in sorted(
+        builtins.items(), key=lambda item: (int(item[1].get("order", 999)), item[0])
+    ):
+        result.append({
+            "id": category_id,
+            "label": str(value.get("label", category_id)),
+            "icon": "",
+            "source": "builtin",
+            "count": counts.get(category_id, 0),
+            "deletable": False,
+        })
+    for category_id, value in sorted(users.items(), key=lambda item: (item[1]["label"].casefold(), item[0])):
+        references = category_references(category_id)
+        result.append({
+            "id": category_id,
+            "label": value["label"],
+            "icon": value["icon"],
+            "source": "user",
+            "count": counts.get(category_id, 0),
+            "deletable": not references,
+        })
+    return result
 
 
 def _orphan_from_directory(app_dir: Path, known_ids: set[str]) -> dict[str, Any] | None:
@@ -1770,6 +1808,71 @@ def user_definition_action(command: str, argv: list[str]) -> None:
     )
 
 
+def _restore_user_category_file(previous: bytes | None) -> None:
+    if previous is None:
+        try:
+            USER_CATEGORY_FILE.unlink()
+        except FileNotFoundError:
+            pass
+        return
+    USER_CATEGORY_FILE.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    fd, temp_name = tempfile.mkstemp(prefix=".categories.rollback.", dir=USER_CATEGORY_FILE.parent)
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(previous)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temp, 0o600)
+        os.replace(temp, USER_CATEGORY_FILE)
+    finally:
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def user_category_action(command: str, argv: list[str]) -> None:
+    try:
+        previous = USER_CATEGORY_FILE.read_bytes()
+    except FileNotFoundError:
+        previous = None
+    except OSError as exc:
+        error(command, "category_state_unreadable", f"Benutzerkategorien konnten nicht gelesen werden: {exc}", EXIT_ACTION_FAILED)
+
+    proc = run_action_capture(command, argv)
+    if proc.returncode != 0:
+        _restore_user_category_file(previous)
+        try:
+            detail = json.loads(proc.stdout)
+            message = detail.get("error", {}).get("message", "Kategorie-Aktion fehlgeschlagen.")
+            code = detail.get("error", {}).get("code", "user_category_failed")
+        except Exception:
+            message = "Kategorie-Aktion fehlgeschlagen."
+            code = "user_category_failed"
+        error(command, str(code), str(message), EXIT_ACTION_FAILED)
+
+    try:
+        detail = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        _restore_user_category_file(previous)
+        error(command, "invalid_user_category_response", "Kategorie-Tool lieferte ungültiges JSON.", EXIT_ACTION_FAILED)
+
+    rebuilt = run_capture([str(CATALOG_SCRIPT), "rebuild"])
+    if rebuilt.returncode != 0:
+        _restore_user_category_file(previous)
+        restored = run_capture([str(CATALOG_SCRIPT), "rebuild"])
+        if restored.returncode != 0:
+            error(command, "category_rollback_failed", "Kategorieänderung und Runtime-Metadaten konnten nicht sicher zurückgesetzt werden.", EXIT_CATALOG_ERROR)
+        error(command, "catalog_error", rebuilt.stderr.strip() or "Kategorieänderung wurde zurückgesetzt, weil der Katalog nicht aktualisiert werden konnte.", EXIT_CATALOG_ERROR)
+
+    catalog = load_catalog()
+    success(command, data={
+        "result": detail,
+        "availableCategories": available_categories(catalog),
+    })
+
+
 def launch_like(command: str, app_id: str, field: str) -> None:
     app = app_from_catalog(command, app_id)
     state = runtime_state(app)
@@ -1798,7 +1901,7 @@ def usage(command: str = "") -> "NoReturn":
     error(
         command or "usage",
         "usage",
-        "Verwendung: caelestia-webapps <list|validate-catalog [--json|--human]|applet-registry|applet-entry|validate-applet-registry|validate-applet-runtime|validate-applet-runtime-sources|status|running-feed|status-feed|browser-video-state|media-control|applet-state|applet-set|applet-settings|applet-setting-set|pin-state|pin-set|notification-watch|runtime|ownership|launch|setup|install|repair|uninstall|uninstall-close|orphan-restore|orphan-uninstall|orphan-uninstall-close|refresh|user-create|user-update|user-delete> [app-id]",
+        "Verwendung: caelestia-webapps <list|validate-catalog [--json|--human]|applet-registry|applet-entry|validate-applet-registry|validate-applet-runtime|validate-applet-runtime-sources|status|running-feed|status-feed|browser-video-state|media-control|applet-state|applet-set|applet-settings|applet-setting-set|pin-state|pin-set|notification-watch|runtime|ownership|launch|setup|install|repair|uninstall|uninstall-close|orphan-restore|orphan-uninstall|orphan-uninstall-close|refresh|user-create|user-update|user-delete|user-category-create|user-category-update|user-category-delete> [app-id]",
         EXIT_USAGE,
     )
 
@@ -1812,16 +1915,19 @@ def main() -> None:
     if command == "list":
         if len(args) != 1:
             usage(command)
-        catalog = load_catalog()
-        success(
-            command,
-            data={
+        # Bootstrap missing runtime metadata before taking the shared snapshot
+        # lock; rebuilding requires an exclusive lock.
+        load_catalog()
+        with engine_lock(command, exclusive=False):
+            catalog = load_catalog()
+            data = {
                 "schemaVersion": catalog.get("schemaVersion"),
                 "categories": catalog.get("categories", []),
+                "availableCategories": available_categories(catalog),
                 "apps": catalog.get("apps", []),
                 "orphanInstallations": orphan_installations(catalog),
-            },
-        )
+            }
+        success(command, data=data)
 
     if command == "validate-catalog":
         if len(args) > 2 or (len(args) == 2 and args[1] not in {"--json", "--human"}):
@@ -2163,6 +2269,24 @@ def main() -> None:
             if state.get("installed"):
                 error(command, "still_installed", "User-App zuerst deinstallieren, dann Definition löschen.", EXIT_ACTION_FAILED)
             user_definition_action(command, [str(USER_APPS_TOOL), "delete", app_id])
+
+    if command == "user-category-create":
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            user_category_action(command, [str(USER_CATEGORIES_TOOL), "create", args[1]])
+
+    if command == "user-category-update":
+        if len(args) != 3:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            user_category_action(command, [str(USER_CATEGORIES_TOOL), "update", args[1], args[2]])
+
+    if command == "user-category-delete":
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            user_category_action(command, [str(USER_CATEGORIES_TOOL), "delete", args[1]])
 
     if command == "uninstall-close":
         if len(args) != 2:

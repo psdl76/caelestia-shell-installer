@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from category_store import merged_categories, user_category_file
+
 ROOT = Path(__file__).resolve().parent.parent
 BUILTIN_DIR = ROOT / "apps"
 CATEGORY_FILE = ROOT / "config/categories.json"
@@ -72,8 +74,7 @@ def q(value: str) -> str:
     return shlex.quote(value)
 
 def categories() -> set[str]:
-    data = json.loads(CATEGORY_FILE.read_text(encoding="utf-8"))
-    return set(data["categories"])
+    return set(merged_categories(CATEGORY_FILE, user_category_file()))
 
 def dashboard_icon_url(app_id: str) -> str:
     return f"https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/{app_id}.svg"

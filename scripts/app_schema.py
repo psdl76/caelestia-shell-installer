@@ -5,6 +5,8 @@ import shlex
 import sys
 from pathlib import Path
 
+from category_store import merged_categories
+
 ASSIGN = re.compile(r'^([A-Z][A-Z0-9_]*)=(?:"(.*)"|\'(.*)\')$')
 CATEGORY_OWNED = {
     "APPLET_VISIBLE",
@@ -79,7 +81,8 @@ def main() -> None:
         raise SystemExit("usage: app_schema.py defaults|validate CATEGORY_JSON [CATEGORY|CONF]")
     action = sys.argv[1]
     category_file = Path(sys.argv[2])
-    categories = load_categories(category_file)
+    user_category_file = Path(sys.argv[3]) if action == "shell-all" and len(sys.argv) == 4 else None
+    categories = merged_categories(category_file, user_category_file)
 
     if action == "shell-all":
         fields = {

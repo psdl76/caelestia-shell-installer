@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 CATALOG_FILE="${CATALOG_FILE:-$DATA_ROOT/catalog.json}"
 APPLET_REGISTRY_FILE="${APPLET_REGISTRY_FILE:-$DATA_ROOT/applet-registry.json}"
+USER_CATEGORY_FILE="${USER_CATEGORY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/caelestia-webapps/categories.json}"
 
 generate_catalog() {
     require_command python3 "sudo pacman -S python"
@@ -14,7 +15,7 @@ generate_catalog() {
     catalog_original="$stage/catalog.original.json"
 
     # Build and validate the complete pair before replacing either live file.
-    if ! python3 "$ROOT_DIR/scripts/generate_catalog.py" "$APP_DEF_DIR" "$USER_APP_DEF_DIR" "$DATA_ROOT" "$catalog_stage"; then
+    if ! python3 "$ROOT_DIR/scripts/generate_catalog.py" "$APP_DEF_DIR" "$USER_APP_DEF_DIR" "$DATA_ROOT" "$catalog_stage" "$USER_CATEGORY_FILE"; then
         rm -rf -- "$stage"
         die "Web-App-Katalog konnte nicht erzeugt werden."
     fi

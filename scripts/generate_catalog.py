@@ -7,6 +7,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from category_store import merged_categories
+
 ASSIGN = re.compile(r'^([A-Z][A-Z0-9_]*)=(?:"(.*)"|\'(.*)\')$')
 
 
@@ -79,12 +81,11 @@ LEGACY_STATUS_TYPE = {
     "calendar": "calendar",
 }
 
-def load_category_defaults(definitions_dir: Path) -> dict[str, dict[str, object]]:
+def load_category_defaults(
+    definitions_dir: Path, user_category_file: Path | None = None
+) -> dict[str, dict[str, object]]:
     schema = definitions_dir.parent / "config" / "categories.json"
-    data = json.loads(schema.read_text(encoding="utf-8"))
-    if data.get("schemaVersion") != 1 or not isinstance(data.get("categories"), dict):
-        raise SystemExit(f"invalid category schema: {schema}")
-    return data["categories"]
+    return merged_categories(schema, user_category_file)
 
 
 
@@ -113,16 +114,24 @@ def main() -> None:
         user_dir = builtin_dir.parent / ".no-user-apps"
         data_root = Path(sys.argv[2])
         output = Path(sys.argv[3])
+        user_category_file = None
     elif len(sys.argv) == 5:
         builtin_dir = Path(sys.argv[1])
         user_dir = Path(sys.argv[2])
         data_root = Path(sys.argv[3])
         output = Path(sys.argv[4])
+        user_category_file = None
+    elif len(sys.argv) == 6:
+        builtin_dir = Path(sys.argv[1])
+        user_dir = Path(sys.argv[2])
+        data_root = Path(sys.argv[3])
+        output = Path(sys.argv[4])
+        user_category_file = Path(sys.argv[5])
     else:
         raise SystemExit(
-            "usage: generate_catalog.py BUILTIN_DEF_DIR [USER_DEF_DIR] DATA_ROOT OUTPUT"
+            "usage: generate_catalog.py BUILTIN_DEF_DIR [USER_DEF_DIR] DATA_ROOT OUTPUT [USER_CATEGORY_JSON]"
         )
-    categories = load_category_defaults(builtin_dir)
+    categories = load_category_defaults(builtin_dir, user_category_file)
     apps: list[dict[str, object]] = []
 
     for conf, source in collect_definitions(builtin_dir, user_dir):

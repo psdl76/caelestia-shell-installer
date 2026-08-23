@@ -15,6 +15,7 @@ ShellRoot {
     property var catalogData: ({})
     property var apps: []
     property var categories: []
+    property var availableCategories: []
     property string selectedCategory: "featured"
     property string searchQuery: ""
     property string statusText: Style.I18n.choose("Katalog wird geladen…", "Loading catalog…")
@@ -63,6 +64,14 @@ ShellRoot {
     property string wizardIconFile: ""
     property string wizardAutoIconId: ""
     property string wizardError: ""
+    property string categoryEditorMode: "create"
+    property string categoryEditorId: ""
+    property string categoryEditorName: ""
+    property string categoryEditorIcon: "home"
+    property string categoryReturnPage: "wizard"
+    property string categoryError: ""
+    property bool categoryBusy: false
+    property bool categoryDeleteConfirm: false
     property string startupStage: "boot"
     property string startupLabel: "Caelestia WebApps"
     property string startupDetail: Style.I18n.choose("Manager wird vorbereitet", "Preparing Manager")
@@ -135,9 +144,9 @@ ShellRoot {
         })
         if (labels[id])
             return labels[id]
-        for (let i = 0; i < categories.length; ++i) {
-            if (categories[i].id === id)
-                return categories[i].label
+        for (let i = 0; i < availableCategories.length; ++i) {
+            if (availableCategories[i].id === id)
+                return availableCategories[i].label
         }
         return id
     }
@@ -185,7 +194,75 @@ ShellRoot {
             "shopping": "\ue8cc",
             "travel": "\ue53d"
         })
-        return icons[id] || "\ue5c3"
+        if (icons[id])
+            return icons[id]
+        const category = availableCategories.find(function(item) { return item.id === id })
+        return category ? categoryIconGlyph(category.icon) : "\ue5c3"
+    }
+
+    function categoryIconGlyph(key) {
+        const icons = ({
+            "home": "\ue88a",
+            "devices": "\ue1b1",
+            "lightbulb": "\ue0f0",
+            "security": "\ue32a",
+            "thermostat": "\ue1ff",
+            "energy": "\ue1a4",
+            "media": "\ue04b",
+            "work": "\ue8f9",
+            "school": "\ue80c",
+            "health": "\ue87d",
+            "shopping": "\ue8cc",
+            "category": "\ue5c3"
+        })
+        return icons[key] || icons.category
+    }
+
+    function categoryIconChoices() {
+        return [
+            { id: "home", label: Style.I18n.choose("Zuhause", "Home") },
+            { id: "devices", label: Style.I18n.choose("Geräte", "Devices") },
+            { id: "lightbulb", label: Style.I18n.choose("Licht", "Lighting") },
+            { id: "security", label: Style.I18n.choose("Sicherheit", "Security") },
+            { id: "thermostat", label: Style.I18n.choose("Klima", "Climate") },
+            { id: "energy", label: Style.I18n.choose("Energie", "Energy") },
+            { id: "media", label: "Media" },
+            { id: "work", label: Style.I18n.choose("Arbeit", "Work") },
+            { id: "school", label: Style.I18n.choose("Lernen", "Learning") },
+            { id: "health", label: Style.I18n.choose("Gesundheit", "Health") },
+            { id: "shopping", label: "Shopping" },
+            { id: "category", label: Style.I18n.choose("Allgemein", "General") }
+        ]
+    }
+
+    function userCategories() {
+        return availableCategories.filter(function(item) { return item.source === "user" })
+    }
+
+    function editingCategory() {
+        return availableCategories.find(function(item) { return item.id === root.categoryEditorId }) || null
+    }
+
+    function categoryOptions() {
+        const options = availableCategories.map(function(item) {
+            return ({ id: item.id, label: root.categoryLabel(item.id) })
+        })
+        options.push({ id: "__category_create__", label: Style.I18n.choose("+ Neue Kategorie …", "+ New category…") })
+        if (root.userCategories().length > 0)
+            options.push({ id: "__category_manage__", label: Style.I18n.choose("Kategorien verwalten …", "Manage categories…") })
+        return options
+    }
+
+    function selectWizardCategory(value) {
+        if (value === "__category_create__") {
+            root.openCategoryCreate("wizard")
+            return
+        }
+        if (value === "__category_manage__") {
+            root.openCategoryManager()
+            return
+        }
+        root.wizardCategory = value
     }
 
     function categoryCount(id) {
@@ -237,6 +314,10 @@ ShellRoot {
     function pageItem(page) {
         if (page === "wizard")
             return wizardPage
+        if (page === "category-manage")
+            return categoryManagePage
+        if (page === "category-editor")
+            return categoryEditorPage
         if (page === "actions")
             return actionPage
         if (page === "applet-settings")
@@ -249,6 +330,10 @@ ShellRoot {
     function pageTranslate(page) {
         if (page === "wizard")
             return wizardPageTranslate
+        if (page === "category-manage")
+            return categoryManagePageTranslate
+        if (page === "category-editor")
+            return categoryEditorPageTranslate
         if (page === "actions")
             return actionPageTranslate
         if (page === "applet-settings")
@@ -277,6 +362,107 @@ ShellRoot {
         root.wizardOpen = false
         root.appletSettingsOpen = false
         root.navigateMainPage("about", 1)
+    }
+
+    function openCategoryCreate(returnPage) {
+        if (root.actionBusy || root.categoryBusy)
+            return
+        root.categoryEditorMode = "create"
+        root.categoryEditorId = ""
+        root.categoryEditorName = ""
+        root.categoryEditorIcon = "home"
+        root.categoryReturnPage = returnPage || "wizard"
+        root.categoryError = ""
+        root.categoryDeleteConfirm = false
+        root.navigateMainPage("category-editor", 1)
+    }
+
+    function openCategoryManager() {
+        if (root.actionBusy || root.categoryBusy)
+            return
+        root.categoryError = ""
+        root.categoryDeleteConfirm = false
+        root.navigateMainPage("category-manage", 1)
+    }
+
+    function closeCategoryManager() {
+        root.navigateMainPage("wizard", -1)
+    }
+
+    function openCategoryEditor(category) {
+        if (!category || category.source !== "user" || root.categoryBusy)
+            return
+        root.categoryEditorMode = "edit"
+        root.categoryEditorId = category.id
+        root.categoryEditorName = category.label
+        root.categoryEditorIcon = category.icon || "category"
+        root.categoryReturnPage = "category-manage"
+        root.categoryError = ""
+        root.categoryDeleteConfirm = false
+        root.navigateMainPage("category-editor", 1)
+    }
+
+    function closeCategoryEditor() {
+        if (root.categoryBusy)
+            return
+        root.categoryError = ""
+        root.categoryDeleteConfirm = false
+        root.navigateMainPage(root.categoryReturnPage, -1)
+    }
+
+    function submitCategory() {
+        if (root.categoryBusy)
+            return
+        const name = root.categoryEditorName.trim()
+        if (name.length === 0) {
+            root.categoryError = Style.I18n.choose("Name darf nicht leer sein.", "Name must not be empty.")
+            return
+        }
+        root.categoryBusy = true
+        root.categoryError = ""
+        const payload = JSON.stringify({ label: name, icon: root.categoryEditorIcon })
+        categoryProcess.command = root.categoryEditorMode === "create"
+            ? [root.projectRoot + "/bin/caelestia-webapps", "user-category-create", payload]
+            : [root.projectRoot + "/bin/caelestia-webapps", "user-category-update", root.categoryEditorId, payload]
+        categoryProcess.running = true
+    }
+
+    function requestCategoryDelete() {
+        const category = root.availableCategories.find(function(item) { return item.id === root.categoryEditorId })
+        if (!category || category.deletable !== true || root.categoryBusy)
+            return
+        if (!root.categoryDeleteConfirm) {
+            root.categoryDeleteConfirm = true
+            root.categoryError = Style.I18n.choose("Zum endgültigen Löschen bitte erneut bestätigen.", "Confirm once more to delete permanently.")
+            return
+        }
+        root.categoryBusy = true
+        root.categoryError = ""
+        categoryProcess.command = [root.projectRoot + "/bin/caelestia-webapps", "user-category-delete", root.categoryEditorId]
+        categoryProcess.running = true
+    }
+
+    function consumeCategoryAction(text) {
+        try {
+            const payload = JSON.parse(String(text ?? "").trim())
+            if (payload.apiVersion !== 1 || payload.ok !== true)
+                throw new Error(payload.error?.message || Style.I18n.choose("Kategorie-Aktion fehlgeschlagen.", "Category action failed."))
+            root.availableCategories = payload.data?.availableCategories || root.availableCategories
+            if (payload.command === "user-category-create") {
+                const created = payload.data?.result?.category || null
+                if (!created || !created.id)
+                    throw new Error(Style.I18n.choose("Neue Kategorie fehlt in der Antwort.", "The new category is missing from the response."))
+                root.wizardCategory = created.id
+                root.navigateMainPage(root.categoryReturnPage, -1)
+            } else {
+                root.navigateMainPage("category-manage", -1)
+            }
+            root.categoryError = ""
+            root.categoryDeleteConfirm = false
+            root.refreshCatalog()
+        } catch (e) {
+            root.categoryError = String(e.message || e)
+        }
     }
 
     function visibleApps() {
@@ -335,6 +521,7 @@ ShellRoot {
             catalogData = parsed
             apps = (parsed.apps || []).concat(parsed.orphanInstallations || [])
             categories = parsed.categories || []
+            availableCategories = parsed.availableCategories || parsed.categories || []
             if (root.actionMenuApp) {
                 const selectedId = root.actionMenuApp.id
                 const updatedApp = apps.find(function(app) { return app.id === selectedId }) || null
@@ -360,6 +547,7 @@ ShellRoot {
             catalogData = ({})
             apps = []
             categories = []
+            availableCategories = []
             catalogReady = false
             catalogError = true
             statusText = Style.I18n.choose("Katalog konnte nicht gelesen werden: ", "Catalog could not be read: ") + e
@@ -636,6 +824,16 @@ ShellRoot {
             .replace(/^-+|-+$/g, "")
     }
 
+    function categorySlugPreview(text) {
+        let value = String(text ?? "").toLowerCase().replace(/ß/g, "ss")
+        try {
+            value = value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+        } catch (e) {
+            value = value.replace(/[ä]/g, "a").replace(/[ö]/g, "o").replace(/[ü]/g, "u")
+        }
+        return value.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+    }
+
     function openCreateWizard() {
         if (root.actionBusy)
             return
@@ -644,7 +842,7 @@ ShellRoot {
         root.wizardName = ""
         root.wizardId = ""
         root.wizardUrl = ""
-        root.wizardCategory = root.categories.length > 0 ? root.categories[0].id : "ai"
+        root.wizardCategory = root.availableCategories.length > 0 ? root.availableCategories[0].id : "ai"
         root.wizardIconMode = "auto"
         root.wizardIconUrl = ""
         root.wizardIconFile = ""
@@ -1088,6 +1286,18 @@ ShellRoot {
         }
     }
 
+    Process {
+        id: categoryProcess
+        stdout: StdioCollector {
+            onStreamFinished: root.consumeCategoryAction(text)
+        }
+        onExited: function(exitCode, exitStatus) {
+            if (exitCode !== 0 && root.categoryError.length === 0)
+                root.categoryError = Style.I18n.choose("Kategorie-Aktion fehlgeschlagen.", "Category action failed.")
+            root.categoryBusy = false
+        }
+    }
+
     Timer {
         id: actionNoticeTimer
         interval: 4500
@@ -1105,6 +1315,13 @@ ShellRoot {
         interval: 0
         repeat: false
         onTriggered: wizardName.field.forceActiveFocus()
+    }
+
+    Timer {
+        id: categoryFocusTimer
+        interval: 0
+        repeat: false
+        onTriggered: categoryNameField.field.forceActiveFocus()
     }
 
     Timer {
@@ -1801,10 +2018,10 @@ ShellRoot {
                             Style.SettingsSelect {
                             label: Style.I18n.choose("Kategorie", "Category")
                             description: Style.I18n.choose("Gruppe im WebApp-Katalog", "Group in the WebApp catalog")
-                            options: root.categories
+                            options: root.categoryOptions()
                             value: root.wizardCategory
                             firstInGroup: true
-                            onSelected: function(value) { root.wizardCategory = value }
+                            onSelected: function(value) { root.selectWizardCategory(value) }
                             }
 
                             Style.SettingsSelect {
@@ -1917,6 +2134,258 @@ ShellRoot {
                                 label: root.actionBusy ? Style.I18n.choose("Bitte warten…", "Please wait…") : (root.wizardEditing ? Style.I18n.choose("Speichern", "Save") : Style.I18n.choose("Anlegen", "Create"))
                                 interactive: !root.actionBusy
                                 onClicked: root.submitWizard()
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                id: categoryManagePage
+                x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                y: 12
+                width: parent.width - x - 12
+                height: parent.height - 24
+                visible: true
+                enabled: root.displayedMainPage === "category-manage" && opacity > 0.01 && root.pendingUninstallApp === null
+                opacity: 0
+                radius: Style.Tokens.radiusMainSurface
+                color: Style.Theme.mainSurface
+                clip: true
+                z: root.displayedMainPage === "category-manage" ? 57 : -1
+
+                transform: Translate { id: categoryManagePageTranslate; x: 0 }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    spacing: Style.Tokens.spaceLg
+
+                    Style.PageHeader {
+                        title: Style.I18n.choose("Kategorien verwalten", "Manage categories")
+                        subtitle: Style.I18n.choose("Eigene Gruppen für deinen WebApp-Katalog", "Custom groups for your WebApp catalog")
+                        interactive: !root.categoryBusy
+                        onBack: root.closeCategoryManager()
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Item { Layout.fillWidth: true }
+                        Style.ActionButton {
+                            icon: "\ue145"
+                            label: Style.I18n.choose("Neue Kategorie", "New category")
+                            primary: true
+                            interactive: !root.categoryBusy
+                            onClicked: root.openCategoryCreate("category-manage")
+                        }
+                    }
+
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        contentHeight: categoryManageColumn.implicitHeight
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ColumnLayout {
+                            id: categoryManageColumn
+                            width: parent.width
+                            spacing: Style.Tokens.spaceXs
+
+                            Style.SectionHeader {
+                                first: true
+                                text: Style.I18n.choose("Eigene Kategorien", "Custom categories")
+                            }
+
+                            Repeater {
+                                model: root.userCategories()
+                                delegate: Style.SettingsAction {
+                                    required property var modelData
+                                    required property int index
+                                    Layout.fillWidth: true
+                                    title: modelData.label
+                                    description: modelData.count + (modelData.count === 1 ? " WebApp" : " WebApps") + (modelData.deletable ? "" : Style.I18n.choose(" · vor dem Löschen zuerst leeren", " · empty before deleting"))
+                                    actionLabel: Style.I18n.choose("Bearbeiten", "Edit")
+                                    firstInGroup: index === 0
+                                    lastInGroup: index === root.userCategories().length - 1
+                                    interactive: !root.categoryBusy
+                                    onClicked: root.openCategoryEditor(modelData)
+                                }
+                            }
+
+                            Rectangle {
+                                visible: root.userCategories().length === 0
+                                Layout.fillWidth: true
+                                implicitHeight: Style.Tokens.emptyStateHeight
+                                radius: Style.Tokens.radiusConnectedOuter
+                                color: Style.Theme.surfaceAlt
+
+                                Column {
+                                    anchors.centerIn: parent
+                                    spacing: Style.Tokens.spaceSm
+                                    Text {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        text: "\ue5c3"
+                                        color: Style.Theme.textDisabled
+                                        font.family: "Material Symbols Rounded"
+                                        font.pixelSize: 30
+                                    }
+                                    Text {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        text: Style.I18n.choose("Noch keine eigenen Kategorien", "No custom categories yet")
+                                        color: Style.Theme.textMuted
+                                        font.pixelSize: Style.Tokens.fontBodyLarge
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                id: categoryEditorPage
+                x: 24 + Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
+                y: 12
+                width: parent.width - x - 12
+                height: parent.height - 24
+                visible: true
+                enabled: root.displayedMainPage === "category-editor" && opacity > 0.01 && root.pendingUninstallApp === null
+                opacity: 0
+                radius: Style.Tokens.radiusMainSurface
+                color: Style.Theme.mainSurface
+                clip: true
+                z: root.displayedMainPage === "category-editor" ? 58 : -1
+
+                transform: Translate { id: categoryEditorPageTranslate; x: 0 }
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 26
+                    spacing: Style.Tokens.spaceLg
+
+                    Style.PageHeader {
+                        title: root.categoryEditorMode === "create"
+                            ? Style.I18n.choose("Kategorie anlegen", "Create category")
+                            : Style.I18n.choose("Kategorie bearbeiten", "Edit category")
+                        subtitle: root.categoryEditorMode === "create"
+                            ? Style.I18n.choose("Name und Symbol für die neue Kataloggruppe", "Name and icon for the new catalog group")
+                            : Style.I18n.choose("Die technische ID bleibt beim Umbenennen erhalten", "The technical ID remains unchanged when renamed")
+                        interactive: !root.categoryBusy
+                        onBack: root.closeCategoryEditor()
+                    }
+
+                    Flickable {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        clip: true
+                        contentHeight: categoryEditorColumn.implicitHeight
+                        boundsBehavior: Flickable.StopAtBounds
+
+                        ColumnLayout {
+                            id: categoryEditorColumn
+                            width: parent.width
+                            spacing: Style.Tokens.spaceLg
+
+                            Style.SectionHeader { first: true; text: Style.I18n.choose("Kategorie", "Category") }
+
+                            Style.SettingsTextField {
+                                id: categoryNameField
+                                label: "Name"
+                                description: root.categoryEditorMode === "create"
+                                    ? (root.categorySlugPreview(root.categoryEditorName).length > 0
+                                        ? Style.I18n.choose("Technische ID: ", "Technical ID: ") + root.categorySlugPreview(root.categoryEditorName)
+                                        : Style.I18n.choose("Die technische ID wird automatisch erzeugt", "The technical ID is generated automatically"))
+                                    : Style.I18n.choose("Technische ID: ", "Technical ID: ") + root.categoryEditorId
+                                value: root.categoryEditorName
+                                firstInGroup: true
+                                lastInGroup: true
+                                field.Keys.onEscapePressed: root.closeCategoryEditor()
+                                onValueEdited: function(value) {
+                                    root.categoryEditorName = value
+                                    root.categoryDeleteConfirm = false
+                                }
+                            }
+
+                            Style.SectionHeader { text: Style.I18n.choose("Symbol", "Icon") }
+
+                            GridLayout {
+                                id: categoryIconGrid
+                                Layout.fillWidth: true
+                                columns: 4
+                                columnSpacing: Style.Tokens.spaceSm
+                                rowSpacing: Style.Tokens.spaceSm
+
+                                Repeater {
+                                    model: root.categoryIconChoices()
+                                    delegate: Style.ActionButton {
+                                        required property var modelData
+                                        Layout.fillWidth: true
+                                        minimumWidth: 118
+                                        icon: root.categoryIconGlyph(modelData.id)
+                                        label: modelData.label
+                                        primary: root.categoryEditorIcon === modelData.id
+                                        interactive: !root.categoryBusy
+                                        onClicked: {
+                                            root.categoryEditorIcon = modelData.id
+                                            root.categoryDeleteConfirm = false
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                visible: root.categoryError.length > 0
+                                Layout.fillWidth: true
+                                text: root.categoryError
+                                wrapMode: Text.WordWrap
+                                color: root.categoryDeleteConfirm ? Style.Theme.textMuted : Style.Theme.error
+                                font.pixelSize: Style.Tokens.fontBodySmall
+                            }
+
+                            Text {
+                                visible: root.categoryEditorMode === "edit" && root.editingCategory() !== null && root.editingCategory().deletable !== true
+                                Layout.fillWidth: true
+                                text: Style.I18n.choose("Diese Kategorie kann erst gelöscht werden, nachdem alle zugeordneten WebApps und Installationsreste entfernt wurden.", "This category can only be deleted after all assigned WebApps and installation remnants have been removed.")
+                                wrapMode: Text.WordWrap
+                                color: Style.Theme.textMuted
+                                font.pixelSize: Style.Tokens.fontBodySmall
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Style.Tokens.spaceMd
+
+                                Style.ActionButton {
+                                    visible: root.categoryEditorMode === "edit"
+                                    danger: true
+                                    icon: "\ue872"
+                                    label: root.categoryDeleteConfirm
+                                        ? Style.I18n.choose("Löschen bestätigen", "Confirm deletion")
+                                        : Style.I18n.choose("Kategorie löschen", "Delete category")
+                                    interactive: !root.categoryBusy && root.editingCategory() !== null && root.editingCategory().deletable === true
+                                    onClicked: root.requestCategoryDelete()
+                                }
+
+                                Item { Layout.fillWidth: true }
+
+                                Style.ActionButton {
+                                    minimumWidth: 96
+                                    label: Style.I18n.choose("Abbrechen", "Cancel")
+                                    interactive: !root.categoryBusy
+                                    onClicked: root.closeCategoryEditor()
+                                }
+
+                                Style.ActionButton {
+                                    minimumWidth: 112
+                                    primary: true
+                                    icon: root.categoryEditorMode === "create" ? "\ue145" : "\ue161"
+                                    label: root.categoryBusy
+                                        ? Style.I18n.choose("Bitte warten…", "Please wait…")
+                                        : (root.categoryEditorMode === "create" ? Style.I18n.choose("Anlegen", "Create") : Style.I18n.choose("Speichern", "Save"))
+                                    interactive: !root.categoryBusy
+                                    onClicked: root.submitCategory()
+                                }
                             }
                         }
                     }
@@ -2354,6 +2823,8 @@ ShellRoot {
                 onFinished: {
                     if (root.displayedMainPage === "wizard" && root.wizardOpen)
                         wizardFocusTimer.restart()
+                    else if (root.displayedMainPage === "category-editor")
+                        categoryFocusTimer.restart()
                 }
 
                 Style.EffectAnimation {

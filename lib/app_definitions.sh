@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 USER_APP_DEF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/caelestia-webapps/apps"
+USER_CATEGORY_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/caelestia-webapps/categories.json"
 
 find_app_definition() {
     local id="$1"

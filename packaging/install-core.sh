@@ -77,8 +77,10 @@ for script in install.sh repair.sh uninstall.sh upgrade.sh manager.sh catalog.sh
 done
 python3 -m py_compile "$STAGE/bin/caelestia-webapps" \
     "$STAGE/scripts/app_schema.py" \
+    "$STAGE/scripts/category_store.py" \
     "$STAGE/scripts/generate_catalog.py" \
-    "$STAGE/scripts/user_apps.py"
+    "$STAGE/scripts/user_apps.py" \
+    "$STAGE/scripts/user_categories.py"
 
 TEST_HOME="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_HOME"; cleanup' EXIT

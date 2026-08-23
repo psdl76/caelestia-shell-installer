@@ -2,6 +2,9 @@
 set -Eeuo pipefail
 export PATH="/usr/bin:/bin"
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+python3 "$ROOT/tests/test_user_categories.py"
+python3 "$ROOT/tests/test_user_category_rollback.py"
 RUNTIME_TMP="$(mktemp -d)"
 trap 'rm -rf -- "$RUNTIME_TMP"' EXIT
 export XDG_RUNTIME_DIR="$RUNTIME_TMP"

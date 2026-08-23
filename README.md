@@ -112,8 +112,8 @@ running Firefox process.
 ### Create your own WebApp
 
 Select **+ WebApp** to add any suitable `http://` or `https://` service that is
-not included in the built-in catalog. Enter a name and URL, choose the closest
-category, and select one of the available icon sources:
+not included in the built-in catalog. Enter a name and URL, choose a category,
+and select one of the available icon sources:
 
 - automatic icon lookup by App ID;
 - a direct HTTPS icon URL;
@@ -125,6 +125,20 @@ run **Set up** once for that isolated Firefox profile. User-created entries can
 later be edited, repaired, uninstalled or removed from the local catalog. They
 remain outside the package-owned Core and therefore survive Core upgrades.
 
+If no existing category fits, open the category selector and choose **+ New
+category…**. Give the category a name and one of the provided symbols. It is
+available immediately in the WebApp form and appears in the left sidebar as
+soon as its first WebApp is saved. Empty custom categories stay out of the
+sidebar.
+
+Choose **Manage categories…** from the same selector to rename a custom
+category, change its symbol or delete it. A category can only be deleted after
+all WebApp definitions and installed remnants that refer to it have been
+removed. Custom categories are user-owned configuration stored under
+`$XDG_CONFIG_HOME/caelestia-webapps/categories.json` (or
+`~/.config/caelestia-webapps/categories.json`) and survive Core upgrades or
+removal.
+
 ## Architecture
 
 - CLI JSON API: v1
@@ -133,6 +147,8 @@ remain outside the package-owned Core and therefore survive Core upgrades.
 - Manager-to-engine calls always use argument lists
 - user definitions and persistent runtime settings remain outside package-owned
   source files
+- custom category definitions remain user-owned XDG configuration and receive
+  neutral applet/Hyprland defaults
 - plugin and standalone code do not import private Caelestia APIs
 
 ## Support and contributions

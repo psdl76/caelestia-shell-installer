@@ -2,6 +2,7 @@
 
 CATEGORY_SCHEMA_FILE="$ROOT_DIR/config/categories.json"
 CATEGORY_SCHEMA_TOOL="$ROOT_DIR/scripts/app_schema.py"
+USER_CATEGORY_FILE="${USER_CATEGORY_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/caelestia-webapps/categories.json}"
 
 [[ -f "$CATEGORY_SCHEMA_FILE" ]] || { echo "FEHLER: Kategorie-Schema fehlt: $CATEGORY_SCHEMA_FILE" >&2; return 1; }
 [[ -f "$CATEGORY_SCHEMA_TOOL" ]] || { echo "FEHLER: Kategorie-Schema-Tool fehlt: $CATEGORY_SCHEMA_TOOL" >&2; return 1; }
@@ -9,7 +10,7 @@ command -v python3 >/dev/null 2>&1 || { echo "FEHLER: python3 wird für das App-
 
 # Load the JSON schema once per process. apply_app_category_defaults itself is
 # pure Bash and therefore cheap even while scanning every app definition.
-_schema_assignments="$(python3 "$CATEGORY_SCHEMA_TOOL" shell-all "$CATEGORY_SCHEMA_FILE")" || return 1
+_schema_assignments="$(python3 "$CATEGORY_SCHEMA_TOOL" shell-all "$CATEGORY_SCHEMA_FILE" "$USER_CATEGORY_FILE")" || return 1
 eval "$_schema_assignments"
 unset _schema_assignments
 
