@@ -49,14 +49,22 @@ source "$LIB_DIR/uninstall_infrastructure.sh"
 
 TX_DIR="$(mktemp -d)" || die "Temporäres Uninstall-Verzeichnis konnte nicht erstellt werden."
 trap 'rm -rf -- "$TX_DIR"' EXIT
+ORIG_RULES="$TX_DIR/rules.original.lua"
+ORIG_KEYBINDS="$TX_DIR/keybinds.original.lua"
 TMP_RULES="$TX_DIR/rules.lua"
 TMP_KEYBINDS="$TX_DIR/keybinds.lua"
 RULES_CHANGED=false
 KEYBINDS_CHANGED=false
 SHARED_RUNTIME_REMOVED=false
 
-[[ -f "$HYPR_RULES_FILE" ]] && cp -- "$HYPR_RULES_FILE" "$TMP_RULES"
-[[ -f "$HYPR_KEYBINDS_FILE" ]] && cp -- "$HYPR_KEYBINDS_FILE" "$TMP_KEYBINDS"
+if [[ -f "$HYPR_RULES_FILE" ]]; then
+    cp -- "$HYPR_RULES_FILE" "$ORIG_RULES"
+    cp -- "$ORIG_RULES" "$TMP_RULES"
+fi
+if [[ -f "$HYPR_KEYBINDS_FILE" ]]; then
+    cp -- "$HYPR_KEYBINDS_FILE" "$ORIG_KEYBINDS"
+    cp -- "$ORIG_KEYBINDS" "$TMP_KEYBINDS"
+fi
 
 step "$APP_NAME deinstallieren"
 
@@ -116,14 +124,31 @@ ok "Temporäre Deinstallationskonfiguration geprüft"
 # older configurations retain the validated full-reload fallback.
 # ---------------------------------------------------------------------------
 step "Validierte Hyprland-Änderungen übernehmen"
+restore_uninstall_originals() {
+    local failed=false
+    if [[ "$RULES_CHANGED" == true ]] && ! atomic_replace_file "$ORIG_RULES" "$HYPR_RULES_FILE" 644; then failed=true; fi
+    if [[ "$KEYBINDS_CHANGED" == true ]] && ! atomic_replace_file "$ORIG_KEYBINDS" "$HYPR_KEYBINDS_FILE" 644; then failed=true; fi
+    [[ "$failed" == false ]]
+}
+
 LUA_LIVE=false
 if [[ "$RULES_CHANGED" == true || "$KEYBINDS_CHANGED" == true ]] && hypr_lua_live_begin; then
     LUA_LIVE=true
     info "Hyprland-Lua-Regeln werden ohne vollständigen Konfigurationsreload entfernt"
 fi
+# Abort immediately before touching either live file if a user or another
+# process changed the configuration while the transaction was being prepared.
+if [[ "$RULES_CHANGED" == true ]] && ! cmp -s -- "$ORIG_RULES" "$HYPR_RULES_FILE"; then
+    [[ "$LUA_LIVE" == true ]] && hypr_lua_live_finish || true
+    die "rules.lua wurde während der Deinstallation extern verändert; Commit abgebrochen."
+fi
+if [[ "$KEYBINDS_CHANGED" == true ]] && ! cmp -s -- "$ORIG_KEYBINDS" "$HYPR_KEYBINDS_FILE"; then
+    [[ "$LUA_LIVE" == true ]] && hypr_lua_live_finish || true
+    die "keybinds.lua wurde während der Deinstallation extern verändert; Commit abgebrochen."
+fi
 if [[ "$RULES_CHANGED" == true ]]; then
     backup_file "$HYPR_RULES_FILE"
-    if ! install -m 644 "$TMP_RULES" "$HYPR_RULES_FILE"; then
+    if ! atomic_replace_file "$TMP_RULES" "$HYPR_RULES_FILE" 644; then
         [[ "$LUA_LIVE" == true ]] && hypr_lua_live_finish || true
         die "rules.lua konnte nicht aktualisiert werden."
     fi
@@ -131,7 +156,8 @@ if [[ "$RULES_CHANGED" == true ]]; then
 fi
 if [[ "$KEYBINDS_CHANGED" == true ]]; then
     backup_file "$HYPR_KEYBINDS_FILE"
-    if ! install -m 644 "$TMP_KEYBINDS" "$HYPR_KEYBINDS_FILE"; then
+    if ! atomic_replace_file "$TMP_KEYBINDS" "$HYPR_KEYBINDS_FILE" 644; then
+        restore_uninstall_originals || true
         [[ "$LUA_LIVE" == true ]] && hypr_lua_live_finish || true
         die "keybinds.lua konnte nicht aktualisiert werden."
     fi
@@ -145,11 +171,17 @@ if [[ "$RULES_CHANGED" == true || "$KEYBINDS_CHANGED" == true ]]; then
         hypr_lua_live_finish || die "Hyprland-Autoreload konnte nicht sicher wiederhergestellt werden."
         ok "Hyprland-Regeln ohne Monitor-Reload entfernt"
     elif command -v hyprctl >/dev/null 2>&1; then
-        hyprctl reload >/dev/null || die "hyprctl reload ist fehlgeschlagen."
+        if ! hyprctl reload >/dev/null; then
+            restore_uninstall_originals || true
+            hyprctl reload >/dev/null 2>&1 || true
+            die "hyprctl reload ist fehlgeschlagen; ursprüngliche Konfiguration wurde wiederhergestellt."
+        fi
         errors="$(hyprctl configerrors 2>&1 || true)"
         if [[ -n "$errors" && "$errors" != "no errors" && "$errors" != *"No errors"* ]]; then
             echo "$errors"
-            die "Hyprland meldet Konfigurationsfehler."
+            restore_uninstall_originals || true
+            hyprctl reload >/dev/null 2>&1 || true
+            die "Hyprland meldet Konfigurationsfehler; ursprüngliche Konfiguration wurde wiederhergestellt."
         fi
         ok "Hyprland neu geladen"
     else

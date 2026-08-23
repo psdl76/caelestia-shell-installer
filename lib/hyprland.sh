@@ -29,9 +29,15 @@ _hypr_validate_tmp() {
 }
 
 _hypr_restore_originals() {
-    local orig_rules="$1" orig_keys="$2" rules_changed="$3" keys_changed="$4"
-    [[ "$rules_changed" == true ]] && cp -- "$orig_rules" "$HYPR_RULES_FILE" 2>/dev/null || true
-    [[ "$keys_changed" == true && -f "$orig_keys" ]] && cp -- "$orig_keys" "$HYPR_KEYBINDS_FILE" 2>/dev/null || true
+    local orig_rules="$1" orig_keys="$2" rules_changed="$3" keys_changed="$4" failed=false
+    if [[ "$rules_changed" == true ]] && ! atomic_replace_file "$orig_rules" "$HYPR_RULES_FILE" 644; then
+        failed=true
+    fi
+    if [[ "$keys_changed" == true && -f "$orig_keys" ]] \
+       && ! atomic_replace_file "$orig_keys" "$HYPR_KEYBINDS_FILE" 644; then
+        failed=true
+    fi
+    [[ "$failed" == false ]]
 }
 
 install_hyprland_rule() {
@@ -107,7 +113,7 @@ install_hyprland_rule() {
     [[ "$keys_changed" == true ]] && backup_file "$HYPR_KEYBINDS_FILE"
 
     if [[ "$rules_changed" == true ]]; then
-        if ! cp -- "$tmp_rules" "$HYPR_RULES_FILE"; then
+        if ! atomic_replace_file "$tmp_rules" "$HYPR_RULES_FILE" 644; then
             [[ "$lua_live" == true ]] && hypr_lua_live_finish || true
             rm -rf "$tx"
             die "rules.lua konnte nicht atomar übernommen werden."
@@ -115,8 +121,8 @@ install_hyprland_rule() {
         ok "rules.lua aktualisiert"
     fi
     if [[ "$keys_changed" == true ]]; then
-        if ! cp -- "$tmp_keys" "$HYPR_KEYBINDS_FILE"; then
-            _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed"
+        if ! atomic_replace_file "$tmp_keys" "$HYPR_KEYBINDS_FILE" 644; then
+            _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed" || true
             [[ "$lua_live" == true ]] && hypr_lua_live_finish || true
             rm -rf "$tx"
             die "keybinds.lua konnte nicht übernommen werden; rules.lua wurde zurückgesetzt."
@@ -132,7 +138,7 @@ install_hyprland_rule() {
         if [[ "$runtime_ok" != true ]]; then
             hypr_lua_disable_app_rules
             [[ "$shared_runtime_created" == true ]] && hypr_lua_disable_project_shared_runtime
-            _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed"
+            _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed" || true
             hypr_lua_live_finish || true
             rm -rf "$tx"
             die "Hyprland-Laufzeitregeln konnten nicht aktiviert werden; ursprüngliche Konfiguration wurde wiederhergestellt."
@@ -150,7 +156,7 @@ install_hyprland_rule() {
     local reload_output errors
     if ! reload_output="$(hyprctl reload 2>&1)"; then
         echo "$reload_output"
-        _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed"
+        _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed" || true
         hyprctl reload >/dev/null 2>&1 || true
         rm -rf "$tx"
         die "hyprctl reload ist fehlgeschlagen; ursprüngliche Konfiguration wurde wiederhergestellt."
@@ -158,7 +164,7 @@ install_hyprland_rule() {
     errors="$(hyprctl configerrors 2>&1 || true)"
     if [[ -n "$errors" && "$errors" != "no errors" && "$errors" != *"No errors"* ]]; then
         echo "$errors"
-        _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed"
+        _hypr_restore_originals "$orig_rules" "$orig_keys" "$rules_changed" "$keys_changed" || true
         hyprctl reload >/dev/null 2>&1 || true
         rm -rf "$tx"
         die "Hyprland meldet Konfigurationsfehler; ursprüngliche Konfiguration wurde wiederhergestellt."

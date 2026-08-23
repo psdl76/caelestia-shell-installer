@@ -127,6 +127,22 @@ files_equal() {
     [[ -f "$a" && -f "$b" ]] && cmp -s -- "$a" "$b"
 }
 
+# Replace a regular file through a temporary sibling and rename(2). Keeping the
+# temporary file in the destination directory guarantees that readers never
+# observe a missing, truncated or partially copied live file, even when the
+# source lives on another filesystem.
+atomic_replace_file() {
+    local src="$1" dst="$2" mode="${3:-644}" dst_dir tmp
+    [[ -f "$src" ]] || return 1
+    dst_dir="$(dirname "$dst")"
+    mkdir -p "$dst_dir" || return 1
+    tmp="$(mktemp "$dst_dir/.${dst##*/}.XXXXXX")" || return 1
+    if ! cp -- "$src" "$tmp" || ! chmod "$mode" "$tmp" || ! mv -f -- "$tmp" "$dst"; then
+        rm -f -- "$tmp"
+        return 1
+    fi
+}
+
 install_file_if_changed() {
     local src="$1" dst="$2" mode="${3:-644}" label="${4:-$(basename "$2")}"
     [[ -f "$src" ]] || die "Quelldatei fehlt: $src"

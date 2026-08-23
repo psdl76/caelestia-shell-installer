@@ -4,7 +4,7 @@ set -Eeuo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 APP_DEF_DIR="$ROOT_DIR/apps"
 DATA_ROOT="$HOME/.local/share/caelestia-webapps"
-STATE_ROOT="$HOME/.local/state/caelestia-webapps"
+STATE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/caelestia-webapps"
 LOG_DIR="$STATE_ROOT/logs"
 LOG_FILE="$LOG_DIR/repair.log"
 CURRENT_VERSION="$(<"$ROOT_DIR/VERSION")"

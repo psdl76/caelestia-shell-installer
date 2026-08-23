@@ -26,6 +26,9 @@ TESTS=(
   test_phase16_7_repair_upgrade_migration.py
   test_phase16_8_uninstall_applet_reset.sh
   test_phase16_8_installed_upgrade_migration.sh
+  test_phase16_8_metadata_pair_commit_rollback.sh
+  test_phase16_8_uninstall_hyprland_toctou.sh
+  test_phase16_8_xdg_state_home.sh
   test_packaging_installed_e2e_01.sh
   test_packaging_upgrade_preserves_user_data_01.sh
   test_packaging_uninstall_preserves_user_data_01.sh
