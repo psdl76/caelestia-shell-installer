@@ -12,14 +12,53 @@ source "$LIB_DIR/app_schema.sh"
 source "$LIB_DIR/hyprland_live.sh"
 trap on_error ERR
 
-[[ $# -eq 1 ]] || { echo "Verwendung: $0 <app-id>"; exit 2; }
-APP_ID_REQUESTED="$1"
+ORPHAN_RECOVERY=false
+if [[ $# -eq 2 && "$1" == "--orphan" ]]; then
+    ORPHAN_RECOVERY=true
+    APP_ID_REQUESTED="$2"
+elif [[ $# -eq 1 ]]; then
+    APP_ID_REQUESTED="$1"
+else
+    echo "Verwendung: $0 [--orphan] <app-id>"
+    exit 2
+fi
+
 APP_DEF="$(find_app_definition "$APP_ID_REQUESTED" || true)"
-[[ -n "$APP_DEF" && -f "$APP_DEF" ]] || die "Unbekannte App-Definition: $APP_ID_REQUESTED"
-validate_app_schema_source "$APP_DEF"
-# shellcheck disable=SC1090
-source "$APP_DEF"
-apply_app_category_defaults
+if [[ "$ORPHAN_RECOVERY" == true ]]; then
+    [[ "${CAELESTIA_WEBAPPS_ORPHAN_RECOVERY:-}" == "1" ]] \
+        || die "Orphan-Recovery darf nur über die validierende CLI gestartet werden."
+    [[ -z "$APP_DEF" ]] || die "Orphan-Recovery ist für bekannte App-Definitionen nicht zulässig."
+    [[ "$APP_ID_REQUESTED" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || die "Ungültige App-ID: $APP_ID_REQUESTED"
+
+    APP_ID="$APP_ID_REQUESTED"
+    APP_NAME="${CAELESTIA_WEBAPPS_ORPHAN_APP_NAME:-}"
+    APP_URL="${CAELESTIA_WEBAPPS_ORPHAN_APP_URL:-}"
+    WINDOW_CLASS="${CAELESTIA_WEBAPPS_ORPHAN_WINDOW_CLASS:-}"
+    MOZ_APP_REMOTINGNAME="${CAELESTIA_WEBAPPS_ORPHAN_MOZ_APP_REMOTINGNAME:-}"
+    APP_CATALOG_CATEGORY="${CAELESTIA_WEBAPPS_ORPHAN_CATEGORY:-}"
+    USE_OPAQUE_TAG="${CAELESTIA_WEBAPPS_ORPHAN_USE_OPAQUE_TAG:-}"
+    [[ -n "$APP_NAME" && ${#APP_NAME} -le 200 && "$APP_NAME" != *$'\n'* && "$APP_NAME" != *$'\r'* ]] \
+        || die "Ungültiger App-Name für Orphan-Recovery."
+    [[ "$APP_URL" == http://* || "$APP_URL" == https://* ]] || die "Ungültige App-URL für Orphan-Recovery."
+    [[ ${#APP_URL} -le 4096 ]] || die "App-URL für Orphan-Recovery ist zu lang."
+    [[ "$WINDOW_CLASS" =~ ^[A-Za-z0-9._-]+$ ]] || die "Ungültige WINDOW_CLASS für Orphan-Recovery."
+    [[ "$MOZ_APP_REMOTINGNAME" =~ ^[A-Za-z0-9._-]+$ ]] || die "Ungültiger MOZ_APP_REMOTINGNAME für Orphan-Recovery."
+    [[ "$USE_OPAQUE_TAG" == "true" || "$USE_OPAQUE_TAG" == "false" ]] || die "Ungültiger Opaque-Wert für Orphan-Recovery."
+    category_exists "$APP_CATALOG_CATEGORY" || die "Ungültige Kategorie für Orphan-Recovery."
+
+    ICON_NAME="$APP_ID"
+    NOTIFICATION_MATCH="$APP_NAME"
+    apply_app_category_defaults
+    # Recovery may remove exact app membership, but never shared project
+    # infrastructure whose ownership cannot be proven without a definition.
+    HYPR_SHARED_OWNER="orphan-recovery"
+else
+    [[ -n "$APP_DEF" && -f "$APP_DEF" ]] || die "Unbekannte App-Definition: $APP_ID_REQUESTED"
+    validate_app_schema_source "$APP_DEF"
+    # shellcheck disable=SC1090
+    source "$APP_DEF"
+    apply_app_category_defaults
+fi
 
 acquire_mutation_lock "uninstall:$APP_ID"
 

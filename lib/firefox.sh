@@ -27,6 +27,7 @@ install_firefox_profile() {
     verify_contains "$USER_JS" "$APP_URL"
     verify_contains "$USER_JS" 'browser.sessionstore.resume_from_crash", false'
     verify_contains "$USER_JS" 'browser.sessionstore.resume_session_once", false'
+    verify_contains "$USER_JS" 'browser.startup.couldRestoreSession.count", -1'
 
     if copy_file_if_changed "$TEMPLATE_DIR/userChrome.app.css" "$APP_USER_CHROME" 644 "Firefox App-Mode CSS"; then :; fi
     if copy_file_if_changed "$TEMPLATE_DIR/userChrome.setup.css" "$SETUP_USER_CHROME" 644 "Firefox Setup-Mode CSS"; then :; fi

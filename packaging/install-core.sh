@@ -47,9 +47,11 @@ command -v bash >/dev/null 2>&1 || { echo "bash is required" >&2; exit 1; }
 mkdir -p "$PREFIX/lib" "$BIN_DIR" "$APP_DIR" "$ICON_DIR" "$LICENSE_DIR"
 STAGE="$(mktemp -d "$PREFIX/lib/.caelestia-webapps.stage.XXXXXX")"
 OLD=""
+DESKTOP_TMP=""
 cleanup() {
     [[ -n "${STAGE:-}" && -d "${STAGE:-}" ]] && rm -rf -- "$STAGE" || true
     [[ -n "${OLD:-}" && -d "${OLD:-}" ]] && rm -rf -- "$OLD" || true
+    [[ -n "${DESKTOP_TMP:-}" && -f "${DESKTOP_TMP:-}" ]] && rm -f -- "$DESKTOP_TMP" || true
     return 0
 }
 trap cleanup EXIT
@@ -121,8 +123,18 @@ EOF
 
 write_wrapper "$CORE_DIR/bin/caelestia-webapps" "$BIN_DIR/caelestia-webapps" "CLI"
 write_wrapper "$CORE_DIR/manager.sh" "$BIN_DIR/caelestia-webapps-manager" "Manager"
-install -m 644 "$SOURCE_ROOT/packaging/caelestia-webapps-manager.desktop" \
-    "$APP_DIR/caelestia-webapps-manager.desktop"
+desktop_target="$APP_DIR/caelestia-webapps-manager.desktop"
+DESKTOP_TMP="$(mktemp "$APP_DIR/.caelestia-webapps-manager.desktop.XXXXXX")"
+while IFS= read -r line; do
+    if [[ "$line" == Exec=caelestia-webapps-manager ]]; then
+        printf 'Exec=%s/caelestia-webapps-manager\n' "$BIN_DIR"
+    else
+        printf '%s\n' "$line"
+    fi
+done < "$SOURCE_ROOT/packaging/caelestia-webapps-manager.desktop" > "$DESKTOP_TMP"
+chmod 644 "$DESKTOP_TMP"
+mv -f -- "$DESKTOP_TMP" "$desktop_target"
+DESKTOP_TMP=""
 install -m 644 "$SOURCE_ROOT/assets/branding/caelestia-webapps.svg" \
     "$ICON_DIR/caelestia-webapps.svg"
 install -m 644 "$SOURCE_ROOT/LICENSE" "$LICENSE_DIR/LICENSE"

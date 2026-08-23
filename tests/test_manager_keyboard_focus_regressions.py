@@ -31,14 +31,15 @@ assert "KeyNavigation.backtab: uninstallConfirmButton" in modal
 for handler in (
     "Keys.onUpPressed",
     "Keys.onDownPressed",
-    "Keys.onHomePressed",
-    "Keys.onEndPressed",
     "Keys.onReturnPressed",
     "Keys.onEnterPressed",
     "Keys.onSpacePressed",
     "Keys.onEscapePressed",
 ):
     assert handler in SELECT
+assert "Keys.onPressed: function(event)" in SELECT
+assert "event.key === Qt.Key_Home" in SELECT
+assert "event.key === Qt.Key_End" in SELECT
 assert "optionList.currentIndex = root.valueIndex()" in SELECT
 assert "id: menu\n        focus: true" in SELECT
 assert "optionList.forceActiveFocus()" in SELECT

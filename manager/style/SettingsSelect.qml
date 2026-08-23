@@ -157,8 +157,15 @@ Rectangle {
 
             Keys.onUpPressed: optionList.decrementCurrentIndex()
             Keys.onDownPressed: optionList.incrementCurrentIndex()
-            Keys.onHomePressed: optionList.currentIndex = optionList.count > 0 ? 0 : -1
-            Keys.onEndPressed: optionList.currentIndex = optionList.count - 1
+            Keys.onPressed: function(event) {
+                if (event.key === Qt.Key_Home) {
+                    optionList.currentIndex = optionList.count > 0 ? 0 : -1
+                    event.accepted = true
+                } else if (event.key === Qt.Key_End) {
+                    optionList.currentIndex = optionList.count - 1
+                    event.accepted = true
+                }
+            }
             Keys.onReturnPressed: root.selectCurrentOption()
             Keys.onEnterPressed: root.selectCurrentOption()
             Keys.onSpacePressed: root.selectCurrentOption()

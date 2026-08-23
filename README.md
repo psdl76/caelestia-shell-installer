@@ -30,6 +30,8 @@ GPL-3.0-only.
 - catalog of built-in and user-defined WebApps;
 - isolated Firefox profiles and Hyprland integration;
 - install, launch, setup, repair and uninstall lifecycle through a stable CLI;
+- recovery of installed WebApp remnants whose former catalog definition is no
+  longer available;
 - optional Caelestia TopBar applets and persistent capability settings;
 - standalone QML/Quickshell Manager with Nexus-style navigation and motion;
 - WebApp detail pages, add/edit wizard, confirmation flows and About page;
@@ -85,6 +87,44 @@ CAELESTIA_WEBAPPS_LANGUAGE=de ./manager.sh
 CAELESTIA_WEBAPPS_LANGUAGE=en ./manager.sh
 ```
 
+## Using the Manager
+
+### Install a catalog WebApp
+
+1. Select an application from Featured, All WebApps or one of the catalog
+   categories.
+2. Choose **Install**. This creates the dedicated Firefox profile, launcher,
+   desktop entry and managed Hyprland integration.
+3. On the WebApp information page, choose **Set up** before opening the app for
+   normal use.
+
+The setup step is important on every first installation. Each WebApp uses its
+own isolated Firefox profile, so permissions from your regular Firefox profile
+are not shared. Setup temporarily shows Firefox's navigation and permission UI
+so the site can request access to features such as microphone, camera and
+notifications. Grant only the permissions you want, then close the setup
+window. Future launches use the compact WebApp view with the saved permissions.
+
+If the WebApp is already running, close it completely before selecting **Set
+up**. The Manager intentionally avoids changing the profile UI underneath a
+running Firefox process.
+
+### Create your own WebApp
+
+Select **+ WebApp** to add any suitable `http://` or `https://` service that is
+not included in the built-in catalog. Enter a name and URL, choose the closest
+category, and select one of the available icon sources:
+
+- automatic icon lookup by App ID;
+- a direct HTTPS icon URL;
+- a local SVG or PNG file.
+
+Creating the entry adds a persistent user-owned catalog definition; it does not
+install the WebApp immediately. Open the new entry, choose **Install**, and then
+run **Set up** once for that isolated Firefox profile. User-created entries can
+later be edited, repaired, uninstalled or removed from the local catalog. They
+remain outside the package-owned Core and therefore survive Core upgrades.
+
 ## Architecture
 
 - CLI JSON API: v1
@@ -112,7 +152,7 @@ The complete accepted product gate is:
 bash tests/run_phase18_2_gate.sh
 ```
 
-It includes the Phase 17 Manager suite, the 25-test Phase 16.8 lifecycle gate,
+It includes the Phase 17 Manager suite, the 26-test Phase 16.8 lifecycle gate,
 shell syntax validation and the 17-test packaging/product gate. Destructive
 lifecycle tests run in disposable HOME/XDG environments.
 

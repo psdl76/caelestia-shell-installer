@@ -166,12 +166,18 @@ grep -Fq 'user_pref("browser.sessionstore.resume_session_once", false);' "$HOME/
     echo 'FAIL: dedicated WebApp profile does not disable one-shot OS session restore' >&2
     exit 1
 }
+grep -Fq 'user_pref("browser.startup.couldRestoreSession.count", -1);' "$HOME/.local/share/caelestia-webapps/apps/chatgpt/profile/user.js" || {
+    echo 'FAIL: dedicated WebApp profile does not disable Firefox session-restore infobar' >&2
+    exit 1
+}
 # Regression: repair/upgrade must apply the no-session-restore policy to an existing profile.
 profile_user_js="$HOME/.local/share/caelestia-webapps/apps/chatgpt/profile/user.js"
 sed -i 's/browser.sessionstore.resume_from_crash", false/browser.sessionstore.resume_from_crash", true/' "$profile_user_js"
 sed -i '/browser.sessionstore.resume_session_once/d' "$profile_user_js"
+sed -i '/browser.startup.couldRestoreSession.count/d' "$profile_user_js"
 grep -Fq 'user_pref("browser.sessionstore.resume_from_crash", true);' "$profile_user_js"
 ! grep -Fq 'browser.sessionstore.resume_session_once' "$profile_user_js"
+! grep -Fq 'browser.startup.couldRestoreSession.count' "$profile_user_js"
 "$ROOT_DIR/repair.sh" --app chatgpt --quiet
 grep -Fq 'user_pref("browser.sessionstore.resume_from_crash", false);' "$profile_user_js" || {
     echo 'FAIL: repair did not migrate existing WebApp profile away from crash session restore' >&2
@@ -179,6 +185,10 @@ grep -Fq 'user_pref("browser.sessionstore.resume_from_crash", false);' "$profile
 }
 grep -Fq 'user_pref("browser.sessionstore.resume_session_once", false);' "$profile_user_js" || {
     echo 'FAIL: repair did not restore the one-shot OS session restore guard' >&2
+    exit 1
+}
+grep -Fq 'user_pref("browser.startup.couldRestoreSession.count", -1);' "$profile_user_js" || {
+    echo 'FAIL: repair did not disable the Firefox session-restore infobar' >&2
     exit 1
 }
 ! grep -Fq 'user_pref("browser.sessionstore.resume_from_crash", true);' "$profile_user_js" || {

@@ -9,5 +9,6 @@ bash "$ROOT/tests/test_shell_syntax.sh"
 bash "$ROOT/tests/run_phase13_gate.sh"
 python3 "$ROOT/tests/test_phase17_7_closing_gate.py"
 python3 "$ROOT/tests/test_manager_keyboard_focus_regressions.py"
+python3 "$ROOT/tests/test_manager_orphan_recovery.py"
 
 echo "PASS: Phase 17.7 Manager visual acceptance and closing gate"

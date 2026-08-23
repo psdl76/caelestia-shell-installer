@@ -7,6 +7,8 @@ import json
 import os
 import base64
 import hashlib
+import re
+import shlex
 import socket
 import struct
 import signal
@@ -86,16 +88,23 @@ def engine_lock(command: str, exclusive: bool):
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
-def run_action_capture(command: str, argv: list[str]) -> subprocess.CompletedProcess[str]:
+def run_action_capture(
+    command: str,
+    argv: list[str],
+    extra_env: dict[str, str] | None = None,
+) -> subprocess.CompletedProcess[str]:
     timeout = max(float(os.environ.get("CAELESTIA_WEBAPPS_ACTION_TIMEOUT_SECONDS", "120")), 1.0)
     try:
+        action_env = os.environ.copy()
+        if extra_env:
+            action_env.update(extra_env)
         proc = subprocess.Popen(
             argv,
             cwd=ROOT,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            env=os.environ.copy(),
+            env=action_env,
             start_new_session=True,
         )
     except OSError:
@@ -197,6 +206,200 @@ def load_catalog() -> dict[str, Any]:
     ):
         error("catalog", "invalid_catalog", "Katalog besitzt nicht das erwartete Schema v2.", EXIT_CATALOG_ERROR)
     return payload
+
+
+_APP_ID_RE = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+_RUNTIME_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _parse_installed_conf(path: Path) -> dict[str, str] | None:
+    """Parse package-written metadata without evaluating it as shell code."""
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    values: dict[str, str] = {}
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            return None
+        key, raw_value = line.split("=", 1)
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]*", key) or key in values:
+            return None
+        try:
+            parts = shlex.split(raw_value, posix=True)
+        except ValueError:
+            return None
+        if len(parts) != 1:
+            return None
+        values[key] = parts[0]
+    return values
+
+
+def _category_ids() -> set[str]:
+    try:
+        payload = json.loads((ROOT / "config/categories.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return set()
+    categories = payload.get("categories", {})
+    return set(categories) if isinstance(categories, dict) else set()
+
+
+def _orphan_from_directory(app_dir: Path, known_ids: set[str]) -> dict[str, Any] | None:
+    app_id = app_dir.name
+    if app_id in known_ids or not _APP_ID_RE.fullmatch(app_id) or app_dir.is_symlink():
+        return None
+
+    metadata_path = app_dir / "installed.conf"
+    if not metadata_path.is_file() or metadata_path.is_symlink():
+        return None
+    values = _parse_installed_conf(metadata_path)
+    if values is None or values.get("APP_ID") != app_id:
+        return None
+
+    app_name = values.get("APP_NAME", "").strip()
+    app_url = values.get("APP_URL", "").strip()
+    window_class = values.get("WINDOW_CLASS", "").strip()
+    remoting_name = values.get("MOZ_APP_REMOTINGNAME", "").strip()
+    category = values.get("APP_CATALOG_CATEGORY", "").strip()
+    opaque = values.get("USE_OPAQUE_TAG", "").strip().lower()
+    parsed_url = urlparse(app_url)
+    if (
+        not app_name
+        or len(app_name) > 200
+        or any(ord(char) < 32 for char in app_name)
+        or parsed_url.scheme not in {"http", "https"}
+        or not parsed_url.netloc
+        or len(app_url) > 4096
+        or not _RUNTIME_ID_RE.fullmatch(window_class)
+        or not _RUNTIME_ID_RE.fullmatch(remoting_name)
+        or category not in _category_ids()
+        or opaque not in {"true", "false"}
+    ):
+        return None
+
+    data_root = Path.home() / ".local/share/caelestia-webapps"
+    launcher = Path.home() / ".local/bin" / f"caelestia-webapp-{app_id}"
+    setup_launcher = Path.home() / ".local/bin" / f"caelestia-webapp-{app_id}-setup"
+    desktop_file = Path.home() / ".local/share/applications" / f"caelestia-webapp-{app_id}.desktop"
+    icon_file = Path.home() / ".local/share/icons/hicolor/scalable/apps" / f"{app_id}.svg"
+    profile_dir = data_root / "apps" / app_id / "profile"
+    expected_paths = {
+        "LAUNCHER": launcher,
+        "SETUP_LAUNCHER": setup_launcher,
+        "DESKTOP_FILE": desktop_file,
+        "ICON_FILE": icon_file,
+        "PROFILE_DIR": profile_dir,
+    }
+    if any(values.get(key) != str(expected) for key, expected in expected_paths.items()):
+        return None
+
+    return {
+        "id": app_id,
+        "name": app_name,
+        "genericName": "Web Application",
+        "comment": "Installed WebApp without a current catalog definition",
+        "url": app_url,
+        "category": category,
+        "categories": [category],
+        "provider": "legacy",
+        "tags": [],
+        "featured": False,
+        "applet": {
+            "available": False,
+            "defaultEnabled": False,
+            "adapter": "none",
+            "support": "none",
+            "capabilities": [],
+            "matchHosts": [],
+        },
+        "installed": True,
+        "source": "orphan",
+        "orphaned": True,
+        "orphanReason": "definition_missing",
+        "ownership": {
+            "owner": "recovery",
+            "definitionMutable": False,
+            "survivesUpgrade": True,
+            "removableFromCatalog": False,
+        },
+        "capabilities": {
+            "launch": False,
+            "setup": False,
+            "install": False,
+            "repair": False,
+            "uninstall": True,
+            "edit": False,
+        },
+        "windowClass": window_class,
+        "browserBridge": {"port": 0, "kind": "none"},
+        "iconName": app_id,
+        "iconProvider": "",
+        "iconId": app_id,
+        "icon": str(icon_file),
+        "iconLocal": "",
+        "iconUrl": "",
+        "iconMode": "local",
+        "iconStore": "",
+        "launcher": str(launcher),
+        "setupLauncher": str(setup_launcher),
+        "notificationMatch": values.get("NOTIFICATION_MATCH", app_name),
+        "notificationMatches": [values.get("NOTIFICATION_MATCH", app_name)],
+        "specialWorkspace": "",
+        "appletVisible": False,
+        "appletShowBadge": False,
+        "appletNotificationPreview": False,
+        "recovery": {
+            "metadata": str(metadata_path),
+            "useOpaqueTag": opaque == "true",
+            "remotingName": remoting_name,
+            "canRestore": (
+                window_class == app_id
+                and remoting_name == app_id
+                and icon_file.is_file()
+                and not icon_file.is_symlink()
+            ),
+        },
+    }
+
+
+def orphan_installations(catalog: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    current = catalog if catalog is not None else load_catalog()
+    known_ids = {
+        str(app.get("id"))
+        for app in current.get("apps", [])
+        if isinstance(app, dict) and app.get("id")
+    }
+    apps_root = Path.home() / ".local/share/caelestia-webapps/apps"
+    try:
+        candidates = sorted(apps_root.iterdir(), key=lambda item: item.name)
+    except OSError:
+        return []
+    result = []
+    for candidate in candidates:
+        if not candidate.is_dir():
+            continue
+        orphan = _orphan_from_directory(candidate, known_ids)
+        if orphan is not None:
+            result.append(orphan)
+    return result
+
+
+def orphan_by_id(command: str, app_id: str) -> dict[str, Any]:
+    if not _APP_ID_RE.fullmatch(app_id):
+        error(command, "invalid_app_id", f"Ungültige App-ID: {app_id}", EXIT_UNKNOWN_APP)
+    match = next((app for app in orphan_installations() if app.get("id") == app_id), None)
+    if match is None:
+        error(command, "unknown_orphan", f"Keine sicher bereinigbare verwaiste Installation: {app_id}", EXIT_UNKNOWN_APP)
+    return match
+
+
+def catalog_with_orphans(catalog: dict[str, Any] | None = None) -> dict[str, Any]:
+    current = catalog if catalog is not None else load_catalog()
+    return {**current, "apps": [*current.get("apps", []), *orphan_installations(current)]}
 
 
 
@@ -373,8 +576,13 @@ def matching_hyprland_windows(catalog: dict[str, Any], app_id: str) -> list[str]
     return result
 
 
-def graceful_close_windows(command: str, app_id: str, timeout_seconds: float = 6.0) -> None:
-    catalog = load_catalog()
+def graceful_close_windows(
+    command: str,
+    app_id: str,
+    timeout_seconds: float = 6.0,
+    catalog: dict[str, Any] | None = None,
+) -> None:
+    catalog = catalog if catalog is not None else load_catalog()
     addresses = matching_hyprland_windows(catalog, app_id)
     if not addresses:
         return
@@ -401,7 +609,10 @@ def graceful_close_windows(command: str, app_id: str, timeout_seconds: float = 6
 
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
-        if not matching_hyprland_windows(load_catalog(), app_id):
+        current = catalog_with_orphans() if any(
+            app.get("orphaned") is True for app in catalog.get("apps", []) if isinstance(app, dict)
+        ) else load_catalog()
+        if not matching_hyprland_windows(current, app_id):
             return
         time.sleep(0.15)
 
@@ -417,6 +628,68 @@ def close_and_uninstall(command: str, app_id: str) -> None:
     require_known_app(command, app_id)
     graceful_close_windows(command, app_id)
     delegate_action(command, [str(UNINSTALL_SCRIPT), app_id], app_id)
+
+
+def orphan_uninstall(command: str, app_id: str, close_first: bool) -> None:
+    orphan = orphan_by_id(command, app_id)
+    recovery_catalog = catalog_with_orphans()
+    addresses = matching_hyprland_windows(recovery_catalog, app_id)
+    if addresses and not close_first:
+        error(
+            command,
+            "app_running",
+            "Die verwaiste WebApp läuft noch. Bitte zuerst schließen und dann bereinigen.",
+            EXIT_ACTION_FAILED,
+        )
+    if close_first:
+        graceful_close_windows(command, app_id, catalog=recovery_catalog)
+
+    recovery = orphan.get("recovery", {})
+    proc = run_action_capture(
+        command,
+        [str(UNINSTALL_SCRIPT), "--orphan", app_id],
+        {
+            "CAELESTIA_WEBAPPS_ORPHAN_RECOVERY": "1",
+            "CAELESTIA_WEBAPPS_ORPHAN_APP_NAME": str(orphan.get("name", "")),
+            "CAELESTIA_WEBAPPS_ORPHAN_APP_URL": str(orphan.get("url", "")),
+            "CAELESTIA_WEBAPPS_ORPHAN_WINDOW_CLASS": str(orphan.get("windowClass", "")),
+            "CAELESTIA_WEBAPPS_ORPHAN_MOZ_APP_REMOTINGNAME": str(recovery.get("remotingName", "")),
+            "CAELESTIA_WEBAPPS_ORPHAN_CATEGORY": str(orphan.get("category", "")),
+            "CAELESTIA_WEBAPPS_ORPHAN_USE_OPAQUE_TAG": "true" if recovery.get("useOpaqueTag") is True else "false",
+        },
+    )
+    if proc.returncode == LOCK_BUSY_EXIT:
+        error(command, "action_busy", "Eine andere WebApps-Aktion läuft bereits.", EXIT_ACTION_BUSY)
+    if proc.returncode != 0:
+        error(command, "action_failed", "Die verwaiste Installation konnte nicht sicher bereinigt werden.", EXIT_ACTION_FAILED)
+    success(command, data={"appId": app_id, "removed": True, "orphaned": True})
+
+
+def orphan_restore(command: str, app_id: str) -> None:
+    orphan = orphan_by_id(command, app_id)
+    recovery = orphan.get("recovery", {})
+    if recovery.get("canRestore") is not True:
+        error(
+            command,
+            "orphan_not_restorable",
+            "Diese verwaiste Installation kann nicht eindeutig als Benutzer-WebApp wiederhergestellt werden.",
+            EXIT_ACTION_FAILED,
+        )
+    payload = json.dumps(
+        {
+            "id": app_id,
+            "name": str(orphan.get("name", "")),
+            "url": str(orphan.get("url", "")),
+            "category": str(orphan.get("category", "")),
+            "iconMode": "local",
+            "iconFile": str(orphan.get("icon", "")),
+            "genericName": "Web Application",
+            "comment": str(orphan.get("comment", "")),
+            "notificationMatch": str(orphan.get("notificationMatch", orphan.get("name", ""))),
+        },
+        ensure_ascii=False,
+    )
+    user_definition_action(command, [str(USER_APPS_TOOL), "create", payload])
 
 
 
@@ -1525,7 +1798,7 @@ def usage(command: str = "") -> "NoReturn":
     error(
         command or "usage",
         "usage",
-        "Verwendung: caelestia-webapps <list|validate-catalog [--json|--human]|applet-registry|applet-entry|validate-applet-registry|validate-applet-runtime|validate-applet-runtime-sources|status|running-feed|status-feed|browser-video-state|media-control|applet-state|applet-set|applet-settings|applet-setting-set|pin-state|pin-set|notification-watch|runtime|ownership|launch|setup|install|repair|uninstall|uninstall-close|refresh|user-create|user-update|user-delete> [app-id]",
+        "Verwendung: caelestia-webapps <list|validate-catalog [--json|--human]|applet-registry|applet-entry|validate-applet-registry|validate-applet-runtime|validate-applet-runtime-sources|status|running-feed|status-feed|browser-video-state|media-control|applet-state|applet-set|applet-settings|applet-setting-set|pin-state|pin-set|notification-watch|runtime|ownership|launch|setup|install|repair|uninstall|uninstall-close|orphan-restore|orphan-uninstall|orphan-uninstall-close|refresh|user-create|user-update|user-delete> [app-id]",
         EXIT_USAGE,
     )
 
@@ -1546,6 +1819,7 @@ def main() -> None:
                 "schemaVersion": catalog.get("schemaVersion"),
                 "categories": catalog.get("categories", []),
                 "apps": catalog.get("apps", []),
+                "orphanInstallations": orphan_installations(catalog),
             },
         )
 
@@ -1749,7 +2023,7 @@ def main() -> None:
     if command == "runtime":
         if len(args) != 1:
             usage(command)
-        catalog = load_catalog()
+        catalog = catalog_with_orphans()
         transient = hyprland_window_state(catalog)
         success(
             command,
@@ -1895,6 +2169,18 @@ def main() -> None:
             usage(command)
         with engine_lock(command, exclusive=True):
             close_and_uninstall(command, args[1])
+
+    if command in {"orphan-uninstall", "orphan-uninstall-close"}:
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            orphan_uninstall(command, args[1], command == "orphan-uninstall-close")
+
+    if command == "orphan-restore":
+        if len(args) != 2:
+            usage(command)
+        with engine_lock(command, exclusive=True):
+            orphan_restore(command, args[1])
 
     if command in {"status", "launch", "setup", "install", "repair", "uninstall"}:
         if len(args) != 2:

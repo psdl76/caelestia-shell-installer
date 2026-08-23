@@ -333,7 +333,7 @@ ShellRoot {
             if (parsed.schemaVersion !== 2)
                 throw new Error(Style.I18n.choose("Unerwartete Katalogversion: ", "Unexpected catalog version: ") + parsed.schemaVersion)
             catalogData = parsed
-            apps = parsed.apps || []
+            apps = (parsed.apps || []).concat(parsed.orphanInstallations || [])
             categories = parsed.categories || []
             if (root.actionMenuApp) {
                 const selectedId = root.actionMenuApp.id
@@ -479,6 +479,28 @@ ShellRoot {
         const app = root.actionMenuApp
         if (!app)
             return []
+        if (app.orphaned === true) {
+            const recoveryEntries = []
+            if (app.recovery?.canRestore === true)
+                recoveryEntries.push({
+                    id: "restore",
+                    group: Style.I18n.choose("Wiederherstellung", "Recovery"),
+                    title: Style.I18n.choose("Benutzer-WebApp wiederherstellen", "Restore custom WebApp"),
+                    description: Style.I18n.choose("Erstellt aus den geprüften Installationsdaten wieder eine reguläre, bearbeitbare Benutzer-WebApp.", "Recreates a regular, editable custom WebApp from the validated installation data."),
+                    label: Style.I18n.choose("Wiederherstellen", "Restore"),
+                    primary: true,
+                    danger: false
+                })
+            recoveryEntries.push({
+                id: "remove",
+                group: Style.I18n.choose("Wiederherstellung", "Recovery"),
+                title: Style.I18n.choose("Verwaiste Installation bereinigen", "Clean up orphaned installation"),
+                description: Style.I18n.choose("Entfernt ausschließlich die zu dieser WebApp gehörenden Launcher-, Desktop-, Profil- und Integrationsreste.", "Removes only the launcher, desktop, profile, and integration remnants owned by this WebApp."),
+                label: Style.I18n.choose("Bereinigen", "Clean up"),
+                danger: true
+            })
+            return recoveryEntries
+        }
         const entries = []
         if (app.installed === true)
             entries.push({ id: "launch", group: "WebApp", title: root.appRunning(app.id) ? Style.I18n.choose("WebApp fokussieren", "Focus WebApp") : Style.I18n.choose("WebApp öffnen", "Open WebApp"), description: root.appRunning(app.id) ? Style.I18n.choose("Zum bereits laufenden WebApp-Fenster wechseln.", "Switch to the running WebApp window.") : Style.I18n.choose("Die installierte WebApp in Firefox starten.", "Launch the installed WebApp in Firefox."), label: root.appRunning(app.id) ? Style.I18n.choose("Fokussieren", "Focus") : Style.I18n.choose("Öffnen", "Open"), primary: true, danger: false })
@@ -519,6 +541,8 @@ ShellRoot {
             root.toggleApplet(app)
         else if (entry.id === "remove")
             root.requestUninstall(app)
+        else if (entry.id === "restore")
+            root.runAction("orphan-restore", app)
         else if (entry.id === "launch")
             root.runAction("launch", app)
         else if (entry.id === "install")
@@ -713,6 +737,9 @@ ShellRoot {
             "repair": Style.I18n.choose("Reparieren", "Repair"),
             "uninstall": Style.I18n.choose("Deinstallieren", "Uninstall"),
             "uninstall-close": Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall"),
+            "orphan-uninstall": Style.I18n.choose("Bereinigen", "Clean up"),
+            "orphan-uninstall-close": Style.I18n.choose("Schließen & bereinigen", "Close & clean up"),
+            "orphan-restore": Style.I18n.choose("Wiederherstellen", "Restore"),
             "applet-set": "Applet",
             "user-create": Style.I18n.choose("Anlegen", "Create"),
             "user-update": Style.I18n.choose("Speichern", "Save"),
@@ -846,6 +873,46 @@ ShellRoot {
         root.pendingUninstallApp = app
     }
 
+    function uninstallDialogTitle(app) {
+        if (!app)
+            return ""
+        if (app.orphaned === true)
+            return root.appRunning(app.id)
+                ? app.name + Style.I18n.choose(" läuft noch", " is still running")
+                : Style.I18n.choose("Verwaiste Installation bereinigen?", "Clean up orphaned installation?")
+        if (!app.installed && app.source === "user")
+            return app.name + Style.I18n.choose(" aus dem Katalog entfernen?", " remove from catalog?")
+        return root.appRunning(app.id)
+            ? app.name + Style.I18n.choose(" läuft noch", " is still running")
+            : Style.I18n.choose("WebApp deinstallieren?", "Uninstall WebApp?")
+    }
+
+    function uninstallDialogDescription(app) {
+        if (!app)
+            return ""
+        if (app.orphaned === true) {
+            const prefix = root.appRunning(app.id)
+                ? Style.I18n.choose("Das laufende Fenster wird zuerst regulär geschlossen. Danach werden ", "The running window will be closed normally first. Then ")
+                : ""
+            return prefix + Style.I18n.choose("ausschließlich die verwaisten Launcher-, Desktop-, Firefox-Profil- und Integrationsdateien dieser WebApp dauerhaft entfernt.", "only this WebApp's orphaned launcher, desktop, Firefox profile, and integration files will be permanently removed.")
+        }
+        if (!app.installed && app.source === "user")
+            return Style.I18n.choose("Die Benutzer-App-Definition und ein verwaltetes Benutzer-Icon werden dauerhaft aus deinem Katalog entfernt.", "The user app definition and its managed user icon will be permanently removed from your catalog.")
+        if (root.appRunning(app.id))
+            return Style.I18n.choose("Zum Deinstallieren muss das laufende WebApp-Fenster zuerst regulär geschlossen werden. Erst danach wird ", "The running WebApp window must be closed normally before uninstalling. Then ") + app.name + Style.I18n.choose(" deinstalliert.", " will be uninstalled.")
+        return app.name + Style.I18n.choose(" wird deinstalliert. Das Firefox-Profil dieser WebApp wird dabei gemäß Engine-Regeln behandelt.", " will be uninstalled. Its Firefox profile is handled according to the engine rules.")
+    }
+
+    function uninstallDialogLabel(app) {
+        if (!app)
+            return ""
+        if (app.orphaned === true)
+            return root.appRunning(app.id) ? Style.I18n.choose("Schließen & bereinigen", "Close & clean up") : Style.I18n.choose("Bereinigen", "Clean up")
+        if (!app.installed && app.source === "user")
+            return Style.I18n.choose("Aus Katalog entfernen", "Remove from catalog")
+        return root.appRunning(app.id) ? Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall") : Style.I18n.choose("Deinstallieren", "Uninstall")
+    }
+
     function restoreUninstallFocus() {
         const previous = root.uninstallPreviousFocusItem
         root.uninstallPreviousFocusItem = null
@@ -869,6 +936,13 @@ ShellRoot {
         if (!app.installed && app.source === "user") {
             root.removeFromCatalogAfterUninstall = false
             root.runAction("user-delete", app)
+            return
+        }
+
+        if (app.orphaned === true) {
+            root.chainedCatalogRemoval = false
+            root.removeFromCatalogAfterUninstall = false
+            root.runAction(root.appRunning(app.id) ? "orphan-uninstall-close" : "orphan-uninstall", app)
             return
         }
 
@@ -1492,7 +1566,9 @@ ShellRoot {
                                                     }
 
                                                     Text {
-                                                        text: Style.I18n.appDescription(modelData)
+                                                        text: modelData.orphaned === true
+                                                            ? Style.I18n.choose("Installationsreste ohne aktuelle Katalogdefinition", "Installation remnants without a current catalog definition")
+                                                            : Style.I18n.appDescription(modelData)
                                                         color: Style.Theme.textSubtle
                                                         font.pixelSize: Style.Tokens.fontBodySmall
                                                         elide: Text.ElideRight
@@ -1946,7 +2022,9 @@ ShellRoot {
 
                                         Text {
                                             Layout.fillWidth: true
-                                            text: Style.I18n.appDescription(root.actionMenuApp)
+                                            text: root.actionMenuApp?.orphaned === true
+                                                ? Style.I18n.choose("Installationsreste ohne aktuelle Katalogdefinition", "Installation remnants without a current catalog definition")
+                                                : Style.I18n.appDescription(root.actionMenuApp)
                                             color: Style.Theme.textSubtle
                                             font.pixelSize: Style.Tokens.fontBodySmall
                                             wrapMode: Text.WordWrap
@@ -2011,12 +2089,12 @@ ShellRoot {
 
                                     Style.SettingsInfoRow {
                                         label: Style.I18n.choose("Status", "Status")
-                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.installed ? (root.appRunning(root.actionMenuApp.id) ? Style.I18n.choose("Installiert · läuft", "Installed · running") : Style.I18n.choose("Installiert", "Installed")) : Style.I18n.choose("Nicht installiert", "Not installed"))
+                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.orphaned === true ? Style.I18n.choose("Verwaiste Installation", "Orphaned installation") : (root.actionMenuApp.installed ? (root.appRunning(root.actionMenuApp.id) ? Style.I18n.choose("Installiert · läuft", "Installed · running") : Style.I18n.choose("Installiert", "Installed")) : Style.I18n.choose("Nicht installiert", "Not installed")))
                                         firstInGroup: true
                                     }
                                     Style.SettingsInfoRow {
                                         label: Style.I18n.choose("Quelle", "Source")
-                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.source === "user" ? Style.I18n.choose("Eigene App", "Custom app") : Style.I18n.choose("Katalog-App", "Catalog app"))
+                                        value: !root.actionMenuApp ? "" : (root.actionMenuApp.orphaned === true ? Style.I18n.choose("Wiederherstellung", "Recovery") : (root.actionMenuApp.source === "user" ? Style.I18n.choose("Eigene App", "Custom app") : Style.I18n.choose("Katalog-App", "Catalog app")))
                                     }
                                     Style.SettingsInfoRow {
                                         label: "App-ID"
@@ -2354,13 +2432,7 @@ ShellRoot {
                         spacing: Style.Tokens.spaceXl
 
                         Text {
-                            text: !root.pendingUninstallApp
-                                ? ""
-                                : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user"
-                                    ? root.pendingUninstallApp.name + Style.I18n.choose(" aus dem Katalog entfernen?", " remove from catalog?")
-                                    : (root.appRunning(root.pendingUninstallApp.id)
-                                        ? root.pendingUninstallApp.name + Style.I18n.choose(" läuft noch", " is still running")
-                                        : Style.I18n.choose("WebApp deinstallieren?", "Uninstall WebApp?")))
+                            text: root.uninstallDialogTitle(root.pendingUninstallApp)
                             color: Style.Theme.textPrimary
                             font.pixelSize: Style.Tokens.fontTitle
                             font.weight: Font.DemiBold
@@ -2371,13 +2443,7 @@ ShellRoot {
                         Text {
                             Layout.fillWidth: true
                             wrapMode: Text.WordWrap
-                            text: !root.pendingUninstallApp
-                                ? ""
-                                : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user"
-                                    ? Style.I18n.choose("Die Benutzer-App-Definition und ein verwaltetes Benutzer-Icon werden dauerhaft aus deinem Katalog entfernt.", "The user app definition and its managed user icon will be permanently removed from your catalog.")
-                                    : (root.appRunning(root.pendingUninstallApp.id)
-                                        ? Style.I18n.choose("Zum Deinstallieren muss das laufende WebApp-Fenster zuerst regulär geschlossen werden. Erst danach wird ", "The running WebApp window must be closed normally before uninstalling. Then ") + root.pendingUninstallApp.name + Style.I18n.choose(" deinstalliert.", " will be uninstalled.")
-                                        : root.pendingUninstallApp.name + Style.I18n.choose(" wird deinstalliert. Das Firefox-Profil dieser WebApp wird dabei gemäß Engine-Regeln behandelt.", " will be uninstalled. Its Firefox profile is handled according to the engine rules.")))
+                            text: root.uninstallDialogDescription(root.pendingUninstallApp)
                             color: Style.Theme.dialogMuted
                             font.pixelSize: Style.Tokens.fontBody
                         }
@@ -2413,7 +2479,7 @@ ShellRoot {
                                 minimumWidth: root.pendingUninstallApp && (!root.pendingUninstallApp.installed || root.appRunning(root.pendingUninstallApp.id)) ? 184 : 118
                                 danger: true
                                 icon: root.pendingUninstallApp && root.appRunning(root.pendingUninstallApp.id) ? "\ue5cd" : "\ue872"
-                                label: !root.pendingUninstallApp ? "" : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user" ? Style.I18n.choose("Aus Katalog entfernen", "Remove from catalog") : (root.appRunning(root.pendingUninstallApp.id) ? Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall") : Style.I18n.choose("Deinstallieren", "Uninstall")))
+                                label: root.uninstallDialogLabel(root.pendingUninstallApp)
                                 KeyNavigation.tab: uninstallCancelButton
                                 KeyNavigation.backtab: uninstallCatalogToggle.visible ? uninstallCatalogToggle : uninstallCancelButton
                                 onClicked: root.confirmUninstall()

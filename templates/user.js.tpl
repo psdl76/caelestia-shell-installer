@@ -14,6 +14,10 @@ user_pref("browser.startup.page", 1);
 // Always start the configured app URL instead of restoring the previous browser session.
 user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("browser.sessionstore.resume_session_once", false);
+// Firefox tracks a separate onboarding infobar that offers to open previous
+// tabs even when automatic session restore is disabled. Dedicated WebApps
+// always open their configured URL, so suppress that browser-only suggestion.
+user_pref("browser.startup.couldRestoreSession.count", -1);
 user_pref("browser.tabs.warnOnClose", false);
 user_pref("browser.warnOnQuitShortcut", false);
 
