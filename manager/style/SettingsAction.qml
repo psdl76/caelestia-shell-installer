@@ -13,6 +13,7 @@ Rectangle {
     property bool danger: false
     property bool interactive: true
     signal clicked()
+    signal keyboardFocusEntered(var item)
 
     implicitHeight: Tokens.appRowHeight
     color: Theme.surfaceAlt
@@ -50,11 +51,13 @@ Rectangle {
         }
 
         ActionButton {
+            id: actionButton
             minimumWidth: 104
             label: root.actionLabel
             danger: root.danger
             primary: root.primary
             interactive: root.interactive
+            onActiveFocusChanged: if (activeFocus) root.keyboardFocusEntered(actionButton)
             onClicked: root.clicked()
         }
     }

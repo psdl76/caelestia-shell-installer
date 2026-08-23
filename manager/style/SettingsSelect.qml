@@ -22,6 +22,21 @@ Rectangle {
         return value
     }
 
+    function valueIndex() {
+        for (let i = 0; i < options.length; ++i) {
+            if (options[i].id === value)
+                return i
+        }
+        return options.length > 0 ? 0 : -1
+    }
+
+    function selectCurrentOption() {
+        if (optionList.currentIndex < 0 || optionList.currentIndex >= options.length)
+            return
+        root.selected(options[optionList.currentIndex].id)
+        menu.close()
+    }
+
     Layout.fillWidth: true
     implicitHeight: 64
     color: Theme.surfaceAlt
@@ -100,12 +115,21 @@ Rectangle {
 
     Popup {
         id: menu
+        focus: true
         x: root.width - width - 12
         y: root.height + Tokens.spaceXs
         width: Math.min(260, root.width * 0.48)
         height: Math.min(280, optionList.contentHeight + 12)
         padding: 6
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        onOpened: {
+            optionList.currentIndex = root.valueIndex()
+            optionList.forceActiveFocus()
+            if (optionList.currentIndex >= 0)
+                optionList.positionViewAtIndex(optionList.currentIndex, ListView.Contain)
+        }
+        onClosed: if (root.interactive) selectButton.forceActiveFocus()
 
         enter: Transition {
             ParallelAnimation {
@@ -127,28 +151,43 @@ Rectangle {
             clip: true
             model: root.options
             spacing: Tokens.spaceXxs
+            activeFocusOnTab: false
+            keyNavigationEnabled: true
+            highlightMoveDuration: Tokens.motionFastSpatial
+
+            Keys.onUpPressed: optionList.decrementCurrentIndex()
+            Keys.onDownPressed: optionList.incrementCurrentIndex()
+            Keys.onHomePressed: optionList.currentIndex = optionList.count > 0 ? 0 : -1
+            Keys.onEndPressed: optionList.currentIndex = optionList.count - 1
+            Keys.onReturnPressed: root.selectCurrentOption()
+            Keys.onEnterPressed: root.selectCurrentOption()
+            Keys.onSpacePressed: root.selectCurrentOption()
+            Keys.onEscapePressed: menu.close()
 
             delegate: Rectangle {
                 required property var modelData
+                required property int index
                 width: optionList.width
                 height: Tokens.controlHeightComfortable
                 radius: Tokens.radiusControl
-                color: modelData.id === root.value ? Theme.categoryActive : "transparent"
+                color: optionList.activeFocus && index === optionList.currentIndex
+                    ? Theme.categoryActive
+                    : (modelData.id === root.value ? Theme.controlSurface : "transparent")
 
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.label
-                    color: modelData.id === root.value ? Theme.accentText : Theme.controlText
+                    color: (modelData.id === root.value || (optionList.activeFocus && index === optionList.currentIndex)) ? Theme.accentText : Theme.controlText
                     font.pixelSize: Tokens.fontBodySmall
                     font.weight: modelData.id === root.value ? Font.DemiBold : Font.Normal
                 }
 
                 StateLayer {
                     onClicked: {
-                        root.selected(modelData.id)
-                        menu.close()
+                        optionList.currentIndex = index
+                        root.selectCurrentOption()
                     }
                 }
             }

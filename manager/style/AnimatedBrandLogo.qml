@@ -21,8 +21,10 @@ Item {
     onActiveChanged: {
         if (active && !skipIntroAnimation)
             intro.restart()
-        else if (!active)
+        else if (!active) {
+            intro.stop()
             resetLogo()
+        }
     }
 
     Component.onCompleted: {

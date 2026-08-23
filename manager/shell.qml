@@ -47,6 +47,7 @@ ShellRoot {
     property string actionStatusText: ""
     property bool actionError: false
     property var pendingUninstallApp: null
+    property var uninstallPreviousFocusItem: null
     property bool removeFromCatalogAfterUninstall: false
     property bool chainedCatalogRemoval: false
     property bool continuationScheduled: false
@@ -196,6 +197,22 @@ ShellRoot {
             return apps.length
         const category = categories.find(function(item) { return item.id === id })
         return category ? category.count : 0
+    }
+
+    function ensureItemVisible(flickable, item, margin) {
+        if (!flickable || !item || !item.activeFocus)
+            return
+        const padding = margin === undefined ? Style.Tokens.spaceMd : margin
+        const point = item.mapToItem(flickable.contentItem, 0, 0)
+        const itemTop = point.y - padding
+        const itemBottom = point.y + item.height + padding
+        const viewportTop = flickable.contentY
+        const viewportBottom = viewportTop + flickable.height
+        const maximumY = Math.max(0, flickable.contentHeight - flickable.height)
+        if (itemTop < viewportTop)
+            flickable.contentY = Math.max(0, itemTop)
+        else if (itemBottom > viewportBottom)
+            flickable.contentY = Math.min(maximumY, itemBottom - flickable.height)
     }
 
     function selectCategory(id, direction) {
@@ -611,7 +628,6 @@ ShellRoot {
         root.wizardError = ""
         root.wizardOpen = true
         root.navigateMainPage("wizard", 1)
-        wizardFocusTimer.restart()
     }
 
     function openEditWizard(app) {
@@ -630,7 +646,6 @@ ShellRoot {
         root.wizardError = ""
         root.wizardOpen = true
         root.navigateMainPage("wizard", 1)
-        wizardFocusTimer.restart()
     }
 
     function closeWizard() {
@@ -826,13 +841,22 @@ ShellRoot {
     function requestUninstall(app) {
         if (root.actionBusy)
             return
+        root.uninstallPreviousFocusItem = window.activeFocusItem
         root.removeFromCatalogAfterUninstall = false
         root.pendingUninstallApp = app
+    }
+
+    function restoreUninstallFocus() {
+        const previous = root.uninstallPreviousFocusItem
+        root.uninstallPreviousFocusItem = null
+        if (previous)
+            Qt.callLater(function() { previous.forceActiveFocus() })
     }
 
     function cancelUninstall() {
         root.pendingUninstallApp = null
         root.removeFromCatalogAfterUninstall = false
+        root.restoreUninstallFocus()
     }
 
     function confirmUninstall() {
@@ -840,6 +864,7 @@ ShellRoot {
         root.pendingUninstallApp = null
         if (!app)
             return
+        root.restoreUninstallFocus()
 
         if (!app.installed && app.source === "user") {
             root.removeFromCatalogAfterUninstall = false
@@ -1188,6 +1213,7 @@ ShellRoot {
 
         Shortcut {
             sequence: "Ctrl+F"
+            enabled: root.pendingUninstallApp === null
             onActivated: managerSearch.forceSearchFocus()
         }
 
@@ -1223,6 +1249,7 @@ ShellRoot {
                 anchors.fill: parent
                 anchors.margins: 12
                 spacing: 12
+                enabled: root.pendingUninstallApp === null
 
                 Rectangle {
                     Layout.preferredWidth: Math.min(Style.Tokens.navigationWidth, window.width * 0.34)
@@ -1264,6 +1291,7 @@ ShellRoot {
                                     ]
 
                                     delegate: Style.NavigationItem {
+                                        id: primaryNavigationItem
                                         required property var modelData
                                         required property int index
                                         Layout.fillWidth: true
@@ -1273,6 +1301,7 @@ ShellRoot {
                                         selected: root.selectedCategory === modelData.id
                                         firstInGroup: index === 0
                                         lastInGroup: index === 2
+                                        onActiveFocusChanged: root.ensureItemVisible(navigationScroll, primaryNavigationItem)
                                         onClicked: root.selectCategory(modelData.id, 1)
                                     }
                                 }
@@ -1283,6 +1312,7 @@ ShellRoot {
                                     model: root.categories
 
                                     delegate: Style.NavigationItem {
+                                        id: categoryNavigationItem
                                         required property var modelData
                                         required property int index
                                         Layout.fillWidth: true
@@ -1292,6 +1322,7 @@ ShellRoot {
                                         selected: root.selectedCategory === modelData.id
                                         firstInGroup: index === 0
                                         lastInGroup: index === root.categories.length - 1
+                                        onActiveFocusChanged: root.ensureItemVisible(navigationScroll, categoryNavigationItem)
                                         onClicked: root.selectCategory(modelData.id, 1)
                                     }
                                 }
@@ -1406,6 +1437,7 @@ ShellRoot {
                                         model: root.visibleApps()
 
                                         delegate: Rectangle {
+                                            id: catalogAppRow
                                             required property var modelData
                                             required property int index
                                             Layout.fillWidth: true
@@ -1418,6 +1450,7 @@ ShellRoot {
                                             border.width: activeFocus ? Style.Tokens.focusRingWidth : 0
                                             border.color: Style.Theme.focusStrong
                                             activeFocusOnTab: !root.actionBusy
+                                            onActiveFocusChanged: root.ensureItemVisible(scroll, catalogAppRow)
 
                                             Keys.onReturnPressed: root.openActionMenu(modelData)
                                             Keys.onEnterPressed: root.openActionMenu(modelData)
@@ -1580,6 +1613,7 @@ ShellRoot {
                 anchors.top: parent.top
                 anchors.right: parent.right
                 z: 100
+                enabled: root.pendingUninstallApp === null
                 onClicked: Qt.quit()
             }
 
@@ -1590,7 +1624,7 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "wizard" && opacity > 0.01
+                enabled: root.displayedMainPage === "wizard" && opacity > 0.01 && root.pendingUninstallApp === null
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
@@ -1820,7 +1854,7 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "actions" && opacity > 0.01
+                enabled: root.displayedMainPage === "actions" && opacity > 0.01 && root.pendingUninstallApp === null
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
@@ -1863,6 +1897,7 @@ ShellRoot {
                         }
 
                         Flickable {
+                            id: actionScroll
                             Layout.fillWidth: true
                             Layout.fillHeight: true
                             clip: true
@@ -1939,6 +1974,7 @@ ShellRoot {
                                         }
 
                                         Style.SettingsToggle {
+                                            id: actionToggle
                                             visible: parent.modelData.type === "toggle"
                                             title: parent.modelData.title
                                             description: parent.modelData.description
@@ -1946,6 +1982,7 @@ ShellRoot {
                                             interactive: !root.actionBusy && root.appletStateAvailable
                                             firstInGroup: parent.firstInSection
                                             lastInGroup: parent.lastInSection
+                                            onActiveFocusChanged: root.ensureItemVisible(actionScroll, actionToggle)
                                             onToggled: root.runActionMenuEntry(parent.modelData)
                                         }
 
@@ -1960,6 +1997,7 @@ ShellRoot {
                                             interactive: !root.actionBusy
                                             firstInGroup: parent.firstInSection
                                             lastInGroup: parent.lastInSection
+                                            onKeyboardFocusEntered: function(item) { root.ensureItemVisible(actionScroll, item) }
                                             onClicked: root.runActionMenuEntry(parent.modelData)
                                         }
                                     }
@@ -2003,7 +2041,7 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "applet-settings" && opacity > 0.01
+                enabled: root.displayedMainPage === "applet-settings" && opacity > 0.01 && root.pendingUninstallApp === null
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
@@ -2099,7 +2137,7 @@ ShellRoot {
                 width: parent.width - x - 12
                 height: parent.height - 24
                 visible: true
-                enabled: root.displayedMainPage === "about" && opacity > 0.01
+                enabled: root.displayedMainPage === "about" && opacity > 0.01 && root.pendingUninstallApp === null
                 opacity: 0
                 radius: Style.Tokens.radiusMainSurface
                 color: Style.Theme.mainSurface
@@ -2235,6 +2273,11 @@ ShellRoot {
             SequentialAnimation {
                 id: mainPageSwitch
 
+                onFinished: {
+                    if (root.displayedMainPage === "wizard" && root.wizardOpen)
+                        wizardFocusTimer.restart()
+                }
+
                 Style.EffectAnimation {
                     target: root.outgoingMainPageItem
                     property: "opacity"
@@ -2267,32 +2310,42 @@ ShellRoot {
                 }
             }
 
-            Rectangle {
+            FocusScope {
+                id: uninstallOverlay
                 anchors.fill: parent
                 visible: root.pendingUninstallApp !== null
-                color: Style.Theme.scrimSoft
+                focus: visible
                 z: 200
 
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: root.cancelUninstall()
+                onVisibleChanged: {
+                    if (visible)
+                        Qt.callLater(function() { uninstallCancelButton.forceActiveFocus() })
                 }
 
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: Math.min(parent.width - 80, 470)
-                    implicitHeight: confirmColumn.implicitHeight + 42
-                    radius: Style.Tokens.radiusDialog
-                    color: Style.Theme.surfaceAlt
-                    border.width: 1
-                    border.color: Style.Theme.dialogBorder
+                    anchors.fill: parent
+                    color: Style.Theme.scrimSoft
 
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: function(mouse) { mouse.accepted = true }
+                        onClicked: root.cancelUninstall()
                     }
 
-                    ColumnLayout {
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: Math.min(parent.width - 80, 470)
+                        implicitHeight: confirmColumn.implicitHeight + 42
+                        radius: Style.Tokens.radiusDialog
+                        color: Style.Theme.surfaceAlt
+                        border.width: 1
+                        border.color: Style.Theme.dialogBorder
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: function(mouse) { mouse.accepted = true }
+                        }
+
+                        ColumnLayout {
                         id: confirmColumn
                         anchors.left: parent.left
                         anchors.right: parent.right
@@ -2330,6 +2383,7 @@ ShellRoot {
                         }
 
                         Style.SettingsToggle {
+                            id: uninstallCatalogToggle
                             visible: root.pendingUninstallApp
                                 && root.pendingUninstallApp.installed
                                 && root.pendingUninstallApp.source === "user"
@@ -2338,6 +2392,8 @@ ShellRoot {
                             checked: root.removeFromCatalogAfterUninstall
                             firstInGroup: true
                             lastInGroup: true
+                            KeyNavigation.tab: uninstallConfirmButton
+                            KeyNavigation.backtab: uninstallCancelButton
                             onToggled: root.removeFromCatalogAfterUninstall = !root.removeFromCatalogAfterUninstall
                         }
 
@@ -2345,20 +2401,27 @@ ShellRoot {
                             Layout.alignment: Qt.AlignRight
                             spacing: Style.Tokens.spaceMd
                             Style.ActionButton {
+                                id: uninstallCancelButton
                                 minimumWidth: 96
                                 label: Style.I18n.choose("Abbrechen", "Cancel")
+                                KeyNavigation.tab: uninstallCatalogToggle.visible ? uninstallCatalogToggle : uninstallConfirmButton
+                                KeyNavigation.backtab: uninstallConfirmButton
                                 onClicked: root.cancelUninstall()
                             }
                             Style.ActionButton {
+                                id: uninstallConfirmButton
                                 minimumWidth: root.pendingUninstallApp && (!root.pendingUninstallApp.installed || root.appRunning(root.pendingUninstallApp.id)) ? 184 : 118
                                 danger: true
                                 icon: root.pendingUninstallApp && root.appRunning(root.pendingUninstallApp.id) ? "\ue5cd" : "\ue872"
                                 label: !root.pendingUninstallApp ? "" : (!root.pendingUninstallApp.installed && root.pendingUninstallApp.source === "user" ? Style.I18n.choose("Aus Katalog entfernen", "Remove from catalog") : (root.appRunning(root.pendingUninstallApp.id) ? Style.I18n.choose("Schließen & deinstallieren", "Close & uninstall") : Style.I18n.choose("Deinstallieren", "Uninstall")))
+                                KeyNavigation.tab: uninstallCancelButton
+                                KeyNavigation.backtab: uninstallCatalogToggle.visible ? uninstallCatalogToggle : uninstallCancelButton
                                 onClicked: root.confirmUninstall()
                             }
                         }
                     }
                 }
+            }
             }
         }
     }
